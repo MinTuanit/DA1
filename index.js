@@ -5,7 +5,7 @@ const morgan = require("morgan");
 const dotenv = require("dotenv");
 var bodyParser = require("body-parser");
 const app = express();
-const procductRoute = require("./src/routes/product")
+const routes = require("./src/routes")
 
 dotenv.config();
 
@@ -26,5 +26,4 @@ mongoose
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(cors());
 app.use(morgan("common")); // see the result in terminal
-app.use("/v1/product", procductRoute);
-
+app.use("/v1", routes);
