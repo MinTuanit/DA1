@@ -1,0 +1,23 @@
+const mongoose = require("mongoose");
+
+const SeatSchema = new mongoose.Schema(
+  {
+    seat_row: {
+      type: String,
+      required: true
+    },
+    seat_number: {
+      type: Number,
+      required: true
+    },
+    room_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Rooms',
+      required: true
+    }
+  }
+);
+
+const Seat = mongoose.model("Seats", RoomSchema);
+
+module.exports = Seat;

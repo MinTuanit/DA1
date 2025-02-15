@@ -11,17 +11,17 @@ dotenv.config();
 
 // Connect Database
 mongoose
-    .connect(process.env.MONGODB_URL)
-    .then(() => {
-        console.log("Connecting to MongoDB");
-        app.listen(process.env.PORT, () => {
-            console.log("Server is runing in port " + process.env.PORT);
-        })
+  .connect(process.env.MONGODB_URL)
+  .then(() => {
+    console.log("Connecting to MongoDB");
+    app.listen(process.env.PORT, () => {
+      console.log("Server is runing in port " + process.env.PORT);
     })
-    .catch((err) => {
-        console.error('Error connecting to MongoDB:', err.message);
-        process.exit(1); // exit program if dont conneted
-    });
+  })
+  .catch((err) => {
+    console.error('Error connecting to MongoDB:', err.message);
+    process.exit(1); // exit program if dont conneted
+  });
 
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(cors());
