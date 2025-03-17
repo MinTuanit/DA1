@@ -61,16 +61,16 @@ const UserSchema = new mongoose.Schema(
   }
 );
 
-userSchema.statics.isEmailTaken = async function (email, excludeUserId) {
+UserSchema.statics.isEmailTaken = async function (email, excludeUserId) {
   const user = await this.findOne({ email, _id: { $ne: excludeUserId } });
   return !!user;
 };
 
-userSchema.methods.isPasswordMatch = async function (password) {
+UserSchema.methods.isPasswordMatch = async function (password) {
   return await bcrypt.compare(password, this.password);
 };
 
-userSchema.pre("save", async function (next) {
+UserSchema.pre("save", async function (next) {
   const user = this;
   if (user.isModified("password")) {
     user.password = await bcrypt.hash(user.password, 8);
@@ -78,6 +78,6 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
-const User = mongoose.model("Users", userSchema);
+const User = mongoose.model("Users", UserSchema);
 
 module.exports = User;
