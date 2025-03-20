@@ -2,6 +2,9 @@ const express = require("express");
 const productRoute = require("./product");
 const userRoute = require("./user");
 const authRoute = require("./auth");
+const employeeRoute = require("./employee");
+const cinemaRoute = require("./cinema");
+const movieRoute = require("./movie");
 
 const router = express.Router();
 
@@ -17,6 +20,18 @@ const defaultRoutes = [
   {
     path: "/auth",
     route: authRoute,
+  },
+  {
+    path: "/employee",
+    route: employeeRoute,
+  },
+  {
+    path: "/cinema",
+    route: cinemaRoute,
+  },
+  {
+    path: "/movie",
+    route: movieRoute,
   },
 ];
 

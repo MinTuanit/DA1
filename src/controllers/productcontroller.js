@@ -24,6 +24,10 @@ const getAllProducts = async (req, res) => {
 const getAProducts = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
+    if (!product) {
+      console.log("Sản phẩm không tồn tại!");
+      return res.status(404).send("Sản phẩm không tồn tại");
+    }
     res.status(201).send(product);
   } catch (error) {
     console.log("Lỗi server: ", error);
@@ -36,9 +40,9 @@ const deleteProductById = async (req, res) => {
     const product = await Product.findByIdAndDelete(req.params.id);
     if (!product) {
       console.log("Sản phẩm không tồn tại!");
-      return res.status(500).send("Lỗi Server");
+      return res.status(404).send("Sản phẩm không tồn tại");
     }
-    else return res.status(204).send("Deleted success");
+    else return res.status(204).send("Xóa sản phẩm thành công");
   } catch (error) {
     console.log("Lỗi server: ", error);
     return res.status(500).send("Lỗi Server");
@@ -53,7 +57,8 @@ const updateProductById = async (req, res) => {
       { new: true }
     );
     if (!product) {
-      throw new ApiError(404, "Product not found");
+      console.log("Sản phẩm không tồn tại!");
+      return res.status(404).send("Sản phẩm không tồn tại");
     }
     res.status(200).send(product);
   } catch (error) {
