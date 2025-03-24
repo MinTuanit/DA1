@@ -21,7 +21,7 @@ const getAllCinemas = async (req, res) => {
   }
 };
 
-const getACinema = async (req, res) => {
+const getCinemaById = async (req, res) => {
   try {
     const cinema = await Cinema.findById(req.params.id);
     res.status(201).send(cinema);
@@ -66,7 +66,7 @@ const updateCinemaById = async (req, res) => {
 module.exports = {
   createCinema,
   updateCinemaById,
-  getACinema,
+  getCinemaById,
   getAllCinemas,
   deleteCinemaById
 };

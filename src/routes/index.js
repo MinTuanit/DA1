@@ -5,6 +5,8 @@ const authRoute = require("./auth");
 const employeeRoute = require("./employee");
 const cinemaRoute = require("./cinema");
 const movieRoute = require("./movie");
+const discountRoute = require("./discount");
+const roomRoute = require("./room");
 
 const router = express.Router();
 
@@ -32,6 +34,14 @@ const defaultRoutes = [
   {
     path: "/movie",
     route: movieRoute,
+  },
+  {
+    path: "/discount",
+    route: discountRoute,
+  },
+  {
+    path: "/room",
+    route: roomRoute,
   },
 ];
 

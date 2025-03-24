@@ -21,7 +21,7 @@ const getAllMovies = async (req, res) => {
     }
 };
 
-const getAMovies = async (req, res) => {
+const getMovieById = async (req, res) => {
     try {
         const movie = await Movie.findById(req.params.id);
         if (!movie) {
@@ -72,5 +72,5 @@ module.exports = {
     updateMovieById,
     getAllMovies,
     deleteMovieById,
-    getAMovies
+    getMovieById
 };

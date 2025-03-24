@@ -21,7 +21,7 @@ const getAllProducts = async (req, res) => {
   }
 };
 
-const getAProducts = async (req, res) => {
+const getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) {
@@ -72,5 +72,5 @@ module.exports = {
   updateProductById,
   getAllProducts,
   deleteProductById,
-  getAProducts
+  getProductById
 };
