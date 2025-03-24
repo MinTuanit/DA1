@@ -7,6 +7,7 @@ const cinemaRoute = require("./cinema");
 const movieRoute = require("./movie");
 const discountRoute = require("./discount");
 const roomRoute = require("./room");
+const seatRoute = require("./seat");
 
 const router = express.Router();
 
@@ -42,6 +43,10 @@ const defaultRoutes = [
   {
     path: "/room",
     route: roomRoute,
+  },
+  {
+    path: "/seat",
+    route: seatRoute,
   },
 ];
 

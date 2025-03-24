@@ -18,6 +18,6 @@ const SeatSchema = new mongoose.Schema(
   }
 );
 
-const Seat = mongoose.model("Seats", RoomSchema);
+const Seat = mongoose.model("Seats", SeatSchema);
 
 module.exports = Seat;
