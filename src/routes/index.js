@@ -9,6 +9,9 @@ const discountRoute = require("./discount");
 const roomRoute = require("./room");
 const seatRoute = require("./seat");
 const reviewRoute = require("./review");
+const showtimeRoute = require("./showtime");
+const ticketRoute = require("./ticket");
+const orderRoute = require("./order");
 
 const router = express.Router();
 
@@ -52,6 +55,18 @@ const defaultRoutes = [
   {
     path: "/review",
     route: reviewRoute,
+  },
+  {
+    path: "/showtime",
+    route: showtimeRoute,
+  },
+  {
+    path: "/ticket",
+    route: ticketRoute,
+  },
+  {
+    path: "/order",
+    route: orderRoute,
   },
 ];
 

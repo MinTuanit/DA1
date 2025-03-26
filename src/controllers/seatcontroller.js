@@ -34,7 +34,6 @@ const getSeatById = async (req, res) => {
     }
 };
 
-
 const getSeatByRoomId = async (req, res) => {
     try {
         const seats = await Seat.find({ room_id: req.params.roomid });
