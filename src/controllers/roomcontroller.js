@@ -24,8 +24,8 @@ const getRoomById = async (req, res) => {
     try {
         const room = await Room.findById(req.params.id);
         if (!room) {
-            console.log("Sản phẩm không tồn tại!");
-            return res.status(404).send("Sản phẩm không tồn tại");
+            console.log("Phòng chiếu không tồn tại!");
+            return res.status(404).send("Phòng chiếu không tồn tại");
         }
         res.status(201).send(room);
     } catch (error) {
@@ -38,10 +38,10 @@ const deleteRoomById = async (req, res) => {
     try {
         const room = await Room.findByIdAndDelete(req.params.id);
         if (!room) {
-            console.log("Sản phẩm không tồn tại!");
-            return res.status(404).send("Sản phẩm không tồn tại");
+            console.log("Phòng chiếu không tồn tại!");
+            return res.status(404).send("Phòng chiếu không tồn tại");
         }
-        else return res.status(204).send("Xóa sản phẩm thành công");
+        else return res.status(204).send("Xóa phòng chiếu thành công");
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
@@ -56,8 +56,8 @@ const updateRoomById = async (req, res) => {
             { new: true }
         );
         if (!room) {
-            console.log("Sản phẩm không tồn tại!");
-            return res.status(404).send("Sản phẩm không tồn tại");
+            console.log("Phòng chiếu không tồn tại!");
+            return res.status(404).send("Phòng chiếu không tồn tại");
         }
         res.status(200).send(room);
     } catch (error) {

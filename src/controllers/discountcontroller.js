@@ -25,10 +25,27 @@ const getDiscountById = async (req, res) => {
     try {
         const discount = await Discount.findById(req.params.id);
         if (!discount) {
-            console.log("Sản phẩm không tồn tại!");
-            return res.status(404).send("Sản phẩm không tồn tại");
+            console.log("Khuyến mãi không tồn tại!");
+            return res.status(404).send("Khuyến mãi không tồn tại");
         }
         res.status(201).send(discount);
+    } catch (error) {
+        console.log("Lỗi server: ", error);
+        return res.status(500).send("Lỗi Server");
+    }
+};
+
+const getDiscountByCode = async (req, res) => {
+    try {
+        const { code } = req.params;
+        const discount = await Discount.findOne({ code: code });
+
+        if (!discount) {
+            console.log("Khuyến mãi không tồn tại!");
+            return res.status(404).send("Khuyến mãi không tồn tại");
+        }
+
+        res.status(200).send(discount);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
@@ -39,10 +56,10 @@ const deleteDiscountById = async (req, res) => {
     try {
         const discount = await Discount.findByIdAndDelete(req.params.id);
         if (!discount) {
-            console.log("Sản phẩm không tồn tại!");
-            return res.status(404).send("Sản phẩm không tồn tại");
+            console.log("Khuyến mãi không tồn tại!");
+            return res.status(404).send("Khuyến mãi không tồn tại");
         }
-        else return res.status(204).send("Xóa sản phẩm thành công");
+        else return res.status(204).send("Xóa khuyến mãi thành công");
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
@@ -57,8 +74,8 @@ const updateDiscountById = async (req, res) => {
             { new: true }
         );
         if (!discount) {
-            console.log("Sản phẩm không tồn tại!");
-            return res.status(404).send("Sản phẩm không tồn tại");
+            console.log("Khuyến mãi không tồn tại!");
+            return res.status(404).send("Khuyến mãi không tồn tại");
         }
         res.status(200).send(discount);
     } catch (error) {
@@ -72,5 +89,6 @@ module.exports = {
     updateDiscountById,
     getAllDiscounts,
     deleteDiscountById,
-    getDiscountById
+    getDiscountById,
+    getDiscountByCode
 };

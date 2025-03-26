@@ -2,6 +2,7 @@ const router = require("express").Router();
 const discountcontroller = require("../controllers/discountcontroller")
 
 router.get("/", discountcontroller.getAllDiscounts);
+router.get("/code/:code", discountcontroller.getDiscountByCode);
 router.get("/:id", discountcontroller.getDiscountById);
 router.post("/", discountcontroller.createDiscount);
 router.patch("/:id", discountcontroller.updateDiscountById);
