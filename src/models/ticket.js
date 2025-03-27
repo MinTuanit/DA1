@@ -2,19 +2,6 @@ const mongoose = require("mongoose");
 
 const TicketSchema = new mongoose.Schema(
   {
-    status: {
-      type: String,
-      enum: [
-        'reserved',
-        'paid',
-        'cancelled'
-      ],
-      default: 'reserved'
-    },
-    booked_at: {
-      type: Date,
-      default: Date.now
-    },
     order_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Orders',

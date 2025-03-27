@@ -2,11 +2,11 @@ const mongoose = require("mongoose");
 
 const SeatSchema = new mongoose.Schema(
   {
-    seat_row: {
+    seat_name: {
       type: String,
       required: true
     },
-    seat_number: {
+    seat_column: {
       type: Number,
       required: true
     },
