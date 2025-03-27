@@ -24,8 +24,8 @@ const getSeatById = async (req, res) => {
     try {
         const seat = await Seat.findById(req.params.id);
         if (!seat) {
-            console.log("Sản phẩm không tồn tại!");
-            return res.status(404).send("Sản phẩm không tồn tại");
+            console.log("Ghế không tồn tại!");
+            return res.status(404).send("Ghế không tồn tại");
         }
         res.status(201).send(seat);
     } catch (error) {
@@ -52,10 +52,10 @@ const deleteSeatById = async (req, res) => {
     try {
         const seat = await Seat.findByIdAndDelete(req.params.id);
         if (!seat) {
-            console.log("Sản phẩm không tồn tại!");
-            return res.status(404).send("Sản phẩm không tồn tại");
+            console.log("Ghế không tồn tại!");
+            return res.status(404).send("Ghế không tồn tại");
         }
-        else return res.status(204).send("Xóa sản phẩm thành công");
+        else return res.status(204).send("Xóa ghế thành công");
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
@@ -85,8 +85,8 @@ const updateSeatById = async (req, res) => {
             { new: true }
         );
         if (!seat) {
-            console.log("Sản phẩm không tồn tại!");
-            return res.status(404).send("Sản phẩm không tồn tại");
+            console.log("Ghế không tồn tại!");
+            return res.status(404).send("Ghế không tồn tại");
         }
         res.status(200).send(seat);
     } catch (error) {
