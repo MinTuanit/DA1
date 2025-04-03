@@ -3,22 +3,20 @@ const User = require("../models/user");
 const createUser = async (req, res) => {
   try {
     if (await User.isEmailTaken(req.body.email)) {
-      console.log("Email đã tồn tại!");
-      return res.status(400).send("Email đã tồn tại. Vui lòng chọn email khác để đăng ký!");
-    } else {
-      const user = await User.create(req.body);
-      res.status(201).send(user);
+      throw new Error("Email đã tồn tại. Vui lòng chọn email khác để đăng ký!");
     }
+    const user = await User.create(req.body);
+    return user;
   } catch (error) {
-    console.log("Lỗi server! ", error);
-    return res.status(500).send(error);
+    throw error;
   }
 };
+
 
 const getAllUsers = async (req, res) => {
   try {
     const users = await User.find();
-    res.status(201).send(users);
+    return res.status(201).send(users);
   } catch (error) {
     console.log("Lỗi server! ", error);
     return res.status(500).send("Lỗi Server");
@@ -32,7 +30,7 @@ const getUserById = async (req, res) => {
       console.log("Tài khoản không tồn tại!");
       return res.status(404).send("Không tìm thấy tài khoản có id:" + req.params.id);
     }
-    res.status(201).send(user);
+    return res.status(201).send(user);
   } catch (error) {
     console.log("Lỗi server: ", error);
     return res.status(500).send("Lỗi Server");
@@ -50,8 +48,7 @@ const getUserByEmail = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "Email không tồn tại!" });
     }
-
-    res.status(200).json(user);
+    return res.status(200).json(user);
   } catch (error) {
     console.error("Lỗi server: ", error);
     res.status(500).json({ message: "Lỗi Server" });
@@ -83,7 +80,7 @@ const updateUserById = async (req, res) => {
       console.log("Tài khoản không tồn tại!");
       return res.status(404).send("Không tìm thấy tài khoản có id:" + req.params.id);
     }
-    res.status(200).send(user);
+    return res.status(200).send(user);
   } catch (error) {
     console.log("Lỗi server: ", error);
     return res.status(500).send("Lỗi Server");

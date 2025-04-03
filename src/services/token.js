@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
+const dayjs = require("dayjs");
 
 dotenv.config();
 const SECRET_KEY = process.env.JWT_SECRET;
@@ -8,6 +9,17 @@ const TOKEN_EXPIRATION = "1h";
 const ACCESS_EXPIRATION_MINUTES = 60;
 const REFRESH_EXPIRATION_DAYS = 7;
 const REFRESH_TOKEN_EXPIRATION = "7d";
+
+const generateToken = (userId, expires, type, secret = SECRET_KEY) => {
+    const payload = {
+        sub: userId,
+        iat: dayjs().unix(),
+        exp: dayjs(expires).unix(),
+        type,
+    };
+    return jwt.sign(payload, secret);
+};
+
 const generateAccessToken = (user) => {
     return jwt.sign({ id: user._id, email: user.email }, SECRET_KEY, { expiresIn: TOKEN_EXPIRATION });
 };
@@ -33,25 +45,11 @@ const verifyToken = (req, res, next) => {
 };
 
 const generateAuthTokens = async (user) => {
-    const accessTokenExpires = dayjs().add(
-        ACCESS_EXPIRATION_MINUTES,
-        "minutes"
-    );
-    const accessToken = generateToken(
-        user.id,
-        accessTokenExpires,
-        "access"
-    );
+    const accessTokenExpires = dayjs().add(ACCESS_EXPIRATION_MINUTES, "minutes");
+    const accessToken = generateToken(user._id, accessTokenExpires.toDate(), "access", SECRET_KEY);
 
-    const refreshTokenExpires = dayjs().add(
-        REFRESH_EXPIRATION_DAYS,
-        "days"
-    );
-    const refreshToken = generateToken(
-        user.id,
-        config.jwt.refreshExpirationDays,
-        "refresh"
-    );
+    const refreshTokenExpires = dayjs().add(REFRESH_EXPIRATION_DAYS, "days");
+    const refreshToken = generateToken(user._id, refreshTokenExpires.toDate(), "refresh", REFRESH_SECRET);
 
     return {
         access: {

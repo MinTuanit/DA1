@@ -1,27 +1,38 @@
 const bcrypt = require("bcryptjs");
 const User = require("../models/user");
 const Token = require("../models/token");
-const tokenservice = require("../services/token")
-const usercontroller = require("../controllers/usercontroller")
-const { generateAccessToken, generateRefreshToken, refreshAccessToken } = require("../services/token");
+const tokenservice = require("../services/token");
+const usercontroller = require("../controllers/usercontroller");
 
 const register = async (req, res) => {
-    const user = await usercontroller.createUser(req, res);
-    const tokens = await tokenservice.generateAuthTokens(user);
-    return res.status(201).send({ user, tokens });
+    try {
+        const user = await usercontroller.createUser(req, res);
+        const tokens = await tokenservice.generateAuthTokens(user);
+        return res.status(201).json({
+            id: user._id,
+            email: user.email,
+            name: user.name,
+            tokens
+        });
+    } catch (error) {
+        return res.status(400).json({ message: error.message });
+    }
 };
 
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
         const user = await User.findOne({ email: email });
+        if (!email || !password) {
+            return res.status(400).json({ message: "Email và mật khẩu là bắt buộc!" });
+        }
 
         if (!user || !(await bcrypt.compare(password, user.password))) {
             return res.status(401).json({ message: "Email hoặc mật khẩu không đúng!" });
         }
 
-        const accessToken = generateAccessToken(user);
-        const refreshToken = generateRefreshToken(user);
+        const accessToken = tokenservice.generateAccessToken(user);
+        const refreshToken = tokenservice.generateRefreshToken(user);
 
         res.json({ accessToken, refreshToken });
     } catch (error) {
