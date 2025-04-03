@@ -1,11 +1,12 @@
 const router = require("express").Router();
-const showtimecontroller = require("../controllers/showtimecontroller")
+const showtimecontroller = require("../controllers/showtimecontroller");
+const auth = require("../middlewares/auth");
 
-router.get("/", showtimecontroller.getAllShowTimes);
-router.get("/movie/:movieid", showtimecontroller.getShowTimeByMovieId);
-router.get("/:id", showtimecontroller.getShowTimeById);
-router.post("/", showtimecontroller.createShowTime);
-router.patch("/:id", showtimecontroller.updateShowTimeById);
-router.delete("/:id", showtimecontroller.deleteShowTimeById);
+router.get("/", auth("getShowTime"), showtimecontroller.getAllShowTimes);
+router.get("/movie/:movieid", auth("getShowTime"), showtimecontroller.getShowTimeByMovieId);
+router.get("/:id", auth("getShowTime"), showtimecontroller.getShowTimeById);
+router.post("/", auth("manageShowTime"), showtimecontroller.createShowTime);
+router.patch("/:id", auth("manageShowTime"), showtimecontroller.updateShowTimeById);
+router.delete("/:id", auth("manageShowTime"), showtimecontroller.deleteShowTimeById);
 
 module.exports = router;

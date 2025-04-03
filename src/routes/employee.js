@@ -1,10 +1,11 @@
 const router = require("express").Router();
-const employeecontroller = require("../controllers/employeecontroller")
+const employeecontroller = require("../controllers/employeecontroller");
+const auth = require("../middlewares/auth");
 
-router.post("/", employeecontroller.createEmployee);
-router.get("/", employeecontroller.getAllEmployees);
-router.get("/:id", employeecontroller.getEmployeeById);
-router.delete("/:id", employeecontroller.deleteEmployeeById);
-router.patch("/:id", employeecontroller.updateEmployeeById);
+router.post("/", auth("manageEmployee"), employeecontroller.createEmployee);
+router.get("/", auth("getEmployee"), employeecontroller.getAllEmployees);
+router.get("/:id", auth("getEmployee"), employeecontroller.getEmployeeById);
+router.delete("/:id", auth("manageEmployee"), employeecontroller.deleteEmployeeById);
+router.patch("/:id", auth("manageEmployee"), employeecontroller.updateEmployeeById);
 
 module.exports = router;

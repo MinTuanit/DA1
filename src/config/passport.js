@@ -8,7 +8,7 @@ const opts = {
     secretOrKey: process.env.JWT_SECRET,
 };
 
-passport.use(
+passport.use('jwt',
     new Strategy(opts, async (payload, done) => {
         try {
             const user = await User.findById(payload.id);

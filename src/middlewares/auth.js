@@ -1,5 +1,6 @@
 const passport = require("passport");
 const { getPermissionByRole } = require("../config/role");
+const ApiError = require("../utils/ApiError");
 
 const verifyCallBack =
     (req, resolve, reject, requiredRights) => async (err, user, info) => {
@@ -17,14 +18,13 @@ const verifyCallBack =
                     userPermissions.includes(requiredRight)
                 );
 
-                if (!hasRequiredRights && req.params.userId !== user.id) {
-                    throw new Error(403, "Forbidden");
+                if (!hasRequiredRights && req.params.userId !== user._id) {
+                    throw new ApiError(403, "Forbidden");
                 }
             } catch (err) {
                 return reject(new ApiError(500, "Error fetching role permissions"));
             }
         }
-
         resolve();
     };
 
