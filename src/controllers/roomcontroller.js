@@ -34,6 +34,20 @@ const getRoomById = async (req, res) => {
     }
 };
 
+const getRoomByCinemaId = async (req, res) => {
+    try {
+        const rooms = await Room.find({ cinema_id: req.params.cinemaid });
+        if (!rooms || rooms.length === 0) {
+            console.log("Không có phòng trong rạp này!");
+            return res.status(404).send("Không có phòng trong rạp này");
+        }
+        res.status(200).send(rooms);
+    } catch (error) {
+        console.log("Lỗi server: ", error);
+        return res.status(500).send("Lỗi Server");
+    }
+};
+
 const deleteRoomById = async (req, res) => {
     try {
         const room = await Room.findByIdAndDelete(req.params.id);
@@ -71,5 +85,6 @@ module.exports = {
     updateRoomById,
     getAllRooms,
     deleteRoomById,
-    getRoomById
+    getRoomById,
+    getRoomByCinemaId
 };
