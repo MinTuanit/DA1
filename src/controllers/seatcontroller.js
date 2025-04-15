@@ -10,6 +10,22 @@ const createSeat = async (req, res) => {
     }
 };
 
+const createSeats = async (req, res) => {
+    try {
+        const seatsData = req.body;
+        if (!Array.isArray(seatsData)) {
+            return res.status(400).send("Dữ liệu gửi lên phải là mảng các ghế");
+        }
+
+        const seats = await Seat.insertMany(seatsData);
+        res.status(201).send(seats);
+    } catch (error) {
+        console.log("Lỗi server! ", error);
+        return res.status(500).send("Lỗi Server");
+    }
+};
+
+
 const getAllSeats = async (req, res) => {
     try {
         const seats = await Seat.find();
@@ -97,6 +113,7 @@ const updateSeatById = async (req, res) => {
 
 module.exports = {
     createSeat,
+    createSeats,
     updateSeatById,
     getAllSeats,
     deleteSeatById,
