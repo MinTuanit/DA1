@@ -25,6 +25,22 @@ const createSeats = async (req, res) => {
     }
 };
 
+const resetSeats = async (req, res) => {
+    try {
+        const { room_id, seats } = req.body;
+        if (!Array.isArray(seats) || !room_id) {
+            return res.status(400).send("Thiếu dữ liệu room_id hoặc danh sách ghế");
+        }
+        // Xoá ghế cũ
+        await Seat.deleteMany({ room_id });
+        // Tạo lại ghế
+        const newSeats = await Seat.insertMany(seats);
+        res.status(201).send(newSeats);
+    } catch (error) {
+        console.log("Lỗi reset ghế: ", error);
+        res.status(500).send("Lỗi Server");
+    }
+};
 
 const getAllSeats = async (req, res) => {
     try {
@@ -119,5 +135,6 @@ module.exports = {
     deleteSeatById,
     getSeatById,
     getSeatByRoomId,
-    deleteSeatByRoomId
+    deleteSeatByRoomId,
+    resetSeats
 };
