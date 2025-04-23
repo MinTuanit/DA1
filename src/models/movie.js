@@ -43,11 +43,29 @@ const MovieSchema = new mongoose.Schema(
       required: true,
       trim: true
     },
+    age_limit: {
+      type: Number
+    },
     trailer_url: {
       type: String,
       required: true,
       trim: true
-    }
+    },
+    rating: {
+      type: Number,
+      min: 1,
+      max: 5
+    },
+    status: {
+      type: String,
+      enum: [
+        'Stopped',
+        'Unknown',
+        'Now Playing',
+        'Coming Soon'
+      ],
+      default: 'Unknown'
+    },
   }
 );
 
