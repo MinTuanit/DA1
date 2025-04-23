@@ -16,10 +16,16 @@ const productSchema = new mongoose.Schema(
       type: Number,
       required: true
     },
-    catagory: {
+    category: {
       type: String,
-      required: true,
-      trim: true
+      enum: [
+        'Food',
+        'Other',
+        'Combo',
+        'Drink',
+        'Souvenir'
+      ],
+      default: 'Other'
     },
   }
 );
