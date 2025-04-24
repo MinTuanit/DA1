@@ -12,25 +12,72 @@ const createShowTime = async (req, res) => {
 
 const getAllShowTimes = async (req, res) => {
     try {
-        const showtimes = await ShowTime.find();
-        res.status(201).send(showtimes);
+        const showtimes = await ShowTime.find()
+            .populate({
+                path: "movie_id",
+                select: "title"
+            })
+            .populate({
+                path: "room_id",
+                select: "name"
+            });
+
+        const formattedShowtimes = showtimes.map(showtime => ({
+            _id: showtime._id,
+            showtime: showtime.showtime,
+            price: showtime.price,
+            movie: {
+                movie_id: showtime.movie_id._id,
+                title: showtime.movie_id.title
+            },
+            room: {
+                room_id: showtime.room_id._id,
+                name: showtime.room_id.name
+            }
+        }));
+
+        res.status(200).json(formattedShowtimes);
     } catch (error) {
         console.log("Lỗi server! ", error);
         return res.status(500).send("Lỗi Server");
     }
 };
 
+
 const getShowTimeById = async (req, res) => {
     try {
-        const showtime = await ShowTime.findById(req.params.id);
+        const showtime = await ShowTime.findById(req.params.id)
+            .populate({
+                path: "movie_id",
+                select: "title"
+            })
+            .populate({
+                path: "room_id",
+                select: "name"
+            });
+
         if (!showtime) {
-            console.log("Lịch chiếu phim không tồn tại!");
-            return res.status(404).send("Lịch chiếu phim không tồn tại");
+            return res.status(404).json({ message: "Không tìm thấy suất chiếu" });
         }
-        res.status(201).send(showtime);
+
+        const formattedShowtimes = {
+            _id: showtime._id,
+            showtime: showtime.showtime,
+            price: showtime.price,
+            movie: {
+                movie_id: showtime.movie_id._id,
+                title: showtime.movie_id.title
+            },
+            room: {
+                room_id: showtime.room_id._id,
+                name: showtime.room_id.name
+            }
+        };
+
+        res.status(200).json(formattedShowtimes);
     } catch (error) {
-        console.log("Lỗi server: ", error);
-        return res.status(500).send("Lỗi Server");
+        console.error("Lỗi khi lấy showtime:", error);
+        res.status(500).json({ message: "Lỗi server" });
     }
 };
 
