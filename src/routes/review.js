@@ -1,6 +1,7 @@
 const router = require("express").Router();
 const reviewcontroller = require("../controllers/reviewcontroller")
 
+router.get("/userinfo/:reviewid", reviewcontroller.getReviewWithUserInfo);
 router.get("/", reviewcontroller.getAllReviews);
 router.get("/movie/:movieid", reviewcontroller.getReviewByMovieId);
 router.get("/:id", reviewcontroller.getReviewById);

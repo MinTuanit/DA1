@@ -1,4 +1,6 @@
 const Cinema = require("../models/cinema");
+const Employee = require("../models/employee");
+const Room = require("../models/room");
 
 
 const createCinema = async (req, res) => {
@@ -30,6 +32,26 @@ const getCinemaById = async (req, res) => {
     return res.status(500).send("Lỗi Server");
   }
 };
+
+const getEmployeeAndRoomById = async (req, res) => {
+  try {
+    const cinema_id = req.params.cinemaid;
+
+    const [employeeCount, roomCount] = await Promise.all([
+      Employee.countDocuments({ cinema_id }),
+      Room.countDocuments({ cinema_id })
+    ]);
+
+    return res.json({
+      cinema_id,
+      employeeCount,
+      roomCount
+    });
+  } catch (error) {
+    console.error("Lỗi khi lấy thông tin cinema:", error);
+    return res.status(500).json({ message: "Lỗi server!" });
+  }
+}
 
 const deleteCinemaById = async (req, res) => {
   try {
@@ -68,5 +90,6 @@ module.exports = {
   updateCinemaById,
   getCinemaById,
   getAllCinemas,
-  deleteCinemaById
+  deleteCinemaById,
+  getEmployeeAndRoomById
 };

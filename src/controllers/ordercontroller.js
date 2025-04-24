@@ -48,6 +48,42 @@ const getOrderByUserId = async (req, res) => {
     }
 };
 
+const getOrderWithUserInfo = async (req, res) => {
+    try {
+        const order_id = req.params.orderid;
+
+        const order = await Order.findById(order_id)
+            .populate({
+                path: 'user_id',
+                select: 'full_name email dateOfBirth cccd phone'
+            });
+
+        if (!order) {
+            return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+        }
+
+        const formattedOrder = {
+            _id: order._id,
+            total_price: order.total_price,
+            status: order.status,
+            ordered_at: order.ordered_at,
+            user: {
+                user_id: order.user_id._id,
+                full_name: order.user_id.full_name,
+                email: order.user_id.email,
+                dateOfBirth: order.user_id.dateOfBirth,
+                cccd: order.user_id.cccd,
+                phone: order.user_id.phone,
+            }
+        };
+
+        res.json(formattedOrder);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Lỗi server" });
+    }
+};
+
 const deleteOrderById = async (req, res) => {
     try {
         const order = await Order.findByIdAndDelete(req.params.id);
@@ -102,5 +138,6 @@ module.exports = {
     deleteOrderById,
     getOrderById,
     getOrderByUserId,
-    deleteOrderByUserId
+    deleteOrderByUserId,
+    getOrderWithUserInfo
 };

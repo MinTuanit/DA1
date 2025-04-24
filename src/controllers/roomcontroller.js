@@ -12,8 +12,20 @@ const createRoom = async (req, res) => {
 
 const getAllRooms = async (req, res) => {
     try {
-        const rooms = await Room.find();
-        res.status(201).send(rooms);
+        const rooms = await Room.find().populate({
+            path: 'cinema_id',
+            select: 'name'
+        });
+        const formattedRooms = rooms.map(room => ({
+            _id: room._id,
+            name: room.name,
+            seat_count: room.seat_count,
+            cinema: {
+                cinema_id: room.cinema_id._id,
+                name: room.cinema_id.name
+            }
+        }));
+        res.status(200).json(formattedRooms);
     } catch (error) {
         console.log("Lỗi server! ", error);
         return res.status(500).send("Lỗi Server");
