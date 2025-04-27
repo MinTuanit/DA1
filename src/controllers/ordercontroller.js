@@ -1,4 +1,7 @@
 const Order = require("../models/order");
+const OrderProductDetail = require("../models/orderproductdetail");
+const Ticket = require("../models/ticket");
+const mongoose = require('mongoose');
 
 const createOrder = async (req, res) => {
     try {
@@ -9,6 +12,50 @@ const createOrder = async (req, res) => {
         return res.status(500).send("Lỗi Server");
     }
 };
+
+const createOrders = async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const { total_price, user_id, products, tickets, status } = req.body;
+        const order = new Order({
+            total_price,
+            user_id,
+            status: status || 'pending',
+            ordered_at: new Date()
+        });
+        await order.save({ session });
+
+        if (products && products.length > 0) {
+            const orderProducts = products.map(p => ({
+                order_id: order._id,
+                product_id: p.product_id,
+                quantity: p.quantity,
+            }));
+            await OrderProductDetail.insertMany(orderProducts, { session });
+        }
+
+        if (tickets && tickets.length > 0) {
+            const ticketDocs = tickets.map(t => ({
+                order_id: order._id,
+                showtime_id: t.showtime_id,
+                seat_id: t.seat_id,
+            }));
+
+            await Ticket.insertMany(ticketDocs, { session });
+        }
+
+        await session.commitTransaction();
+        session.endSession();
+        res.status(201).json({ message: 'Tạo hóa đơn thành công: ', order_id: order._id });
+
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        console.error(error);
+        res.status(500).json({ message: 'Lỗi khi tạo hóa đơn: ', error: error.message });
+    }
+}
 
 const getAllOrders = async (req, res) => {
     try {
@@ -33,6 +80,72 @@ const getOrderById = async (req, res) => {
         return res.status(500).send("Lỗi Server");
     }
 };
+
+const getOrderWithInfoById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const order = await Order.findById(id)
+            .populate('user_id', 'full_name phone')
+            .lean();
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        const orderProducts = await OrderProductDetail.find({ order_id: id })
+            .populate('product_id', 'name price category')
+            .lean();
+
+        const products = orderProducts.map(op => ({
+            product_id: op.product_id._id,
+            name: op.product_id.name,
+            price: op.product_id.price,
+            category: op.product_id.category,
+            quantity: op.quantity
+        }));
+
+        const tickets = await Ticket.find({ order_id: id })
+            .populate([
+                { path: 'showtime_id', select: 'start_time movie_id', populate: { path: 'movie_id', select: 'title' } },
+                { path: 'seat_id', select: 'seat_name seat_column' }
+            ])
+            .lean();
+
+        const ticketDetails = tickets.map(t => ({
+            ticket_id: t._id,
+            showtime: {
+                showtime_id: t.showtime_id._id,
+                start_time: t.showtime_id.start_time,
+                movie_title: t.showtime_id.movie_id.title,
+            },
+            seat: {
+                seat_id: t.seat_id._id,
+                seat_row: t.seat_id.seat_name,
+                seat_number: t.seat_id.seat_column
+            }
+        }));
+
+        res.status(200).json({
+            order: {
+                order_id: order._id,
+                total_price: order.total_price,
+                status: order.status,
+                ordered_at: order.ordered_at,
+                user: {
+                    user_id: order.user_id._id,
+                    full_name: order.user_id.full_name,
+                    phone: order.user_id.phone
+                }
+            },
+            products,
+            tickets: ticketDetails
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Lỗi khi lấy hóa đơn', error: error.message });
+    }
+}
 
 const getOrderByUserId = async (req, res) => {
     try {
@@ -139,5 +252,7 @@ module.exports = {
     getOrderById,
     getOrderByUserId,
     deleteOrderByUserId,
-    getOrderWithUserInfo
+    getOrderWithUserInfo,
+    createOrders,
+    getOrderWithInfoById
 };
