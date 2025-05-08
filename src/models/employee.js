@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const User = require("./user");
 
 const EmployeeSchema = new mongoose.Schema(
   {
@@ -12,11 +13,6 @@ const EmployeeSchema = new mongoose.Schema(
       required: true,
       trim: true
     },
-    employee_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Users',
-      required: true
-    },
     cinema_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Cinemas'
@@ -24,6 +20,6 @@ const EmployeeSchema = new mongoose.Schema(
   }
 );
 
-const Employee = mongoose.model("Employees", EmployeeSchema);
+const Employee = User.discriminator('Employees', EmployeeSchema);
 
 module.exports = Employee;
