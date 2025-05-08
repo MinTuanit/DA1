@@ -5,6 +5,7 @@ router.get("/ticketandproduct/:orderid", ordercontroller.getTicketAndProductByOr
 router.get("/", ordercontroller.getAllOrders);
 router.get("/userinfo/:orderid", ordercontroller.getOrderWithUserInfo);
 router.get("/user/:userid", ordercontroller.getOrderByUserId);
+router.get("/code/:ordercode", ordercontroller.getOrderByCode);
 router.get("/:id", ordercontroller.getOrderById);
 router.get("/details/:id", ordercontroller.getOrderWithInfoById);
 router.post("/", ordercontroller.createOrder);

@@ -4,27 +4,58 @@ const Ticket = require("../models/ticket");
 const Product = require("../models/product");
 const mongoose = require('mongoose');
 
+
+const generateUniqueOrderCode = async () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code;
+    let isDuplicate = true;
+
+    while (isDuplicate) {
+        code = '';
+        for (let i = 0; i < 6; i++) {
+            code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        const existing = await Order.findOne({ ordercode: code });
+        if (!existing) {
+            isDuplicate = false;
+        }
+    }
+    return code;
+};
+
 const createOrder = async (req, res) => {
     try {
-        const order = await Order.create(req.body);
-        return res.status(201).send(order);
+        const ordercode = await generateUniqueOrderCode();
+
+        const newOrder = new Order({
+            ordercode,
+            total_price: req.body.total_price,
+            status: req.body.status || 'pending',
+            user_id: req.body.user_id,
+        });
+        await newOrder.save();
+        return res.status(201).json(newOrder);
     } catch (error) {
-        console.log("Lỗi server! ", error);
-        return res.status(500).send("Lỗi Server");
+        console.error("Lỗi tạo đơn hàng:", error);
+        return res.status(500).json({ message: "Lỗi server!" });
     }
 };
 
 const createOrders = async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
+
     try {
         const { total_price, user_id, products, tickets, status } = req.body;
+        const ordercode = await generateUniqueOrderCode();
         const order = new Order({
+            ordercode,
             total_price,
-            user_id,
+            user_id: user_id || null,
             status: status || 'pending',
             ordered_at: new Date()
         });
+
         await order.save({ session });
 
         if (products && products.length > 0) {
@@ -42,29 +73,25 @@ const createOrders = async (req, res) => {
                 showtime_id: t.showtime_id,
                 seat_id: t.seat_id,
             }));
-
             await Ticket.insertMany(ticketDocs, { session });
         }
 
         await session.commitTransaction();
         session.endSession();
-        return res.status(201).json({ message: 'Tạo hóa đơn thành công: ', order_id: order._id });
+        return res.status(201).json({
+            message: 'Tạo hóa đơn thành công',
+            order_id: order._id,
+            ordercode
+        });
 
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
         console.error(error);
-        return res.status(500).json({ message: 'Lỗi khi tạo hóa đơn: ', error: error.message });
-    }
-}
-
-const getAllOrders = async (req, res) => {
-    try {
-        const orders = await Order.find();
-        return res.status(201).send(orders);
-    } catch (error) {
-        console.log("Lỗi server! ", error);
-        return res.status(500).send("Lỗi Server");
+        return res.status(500).json({
+            message: 'Lỗi khi tạo hóa đơn',
+            error: error.message
+        });
     }
 };
 
@@ -88,6 +115,32 @@ const getTicketAndProductByOrderId = async (req, res) => {
     }
 }
 
+const getAllOrders = async (req, res) => {
+    try {
+        const orders = await Order.find();
+
+        const ordersWithCounts = await Promise.all(
+            orders.map(async (order) => {
+                const [ticketCount, productCount] = await Promise.all([
+                    Ticket.countDocuments({ order_id: order._id }),
+                    Product.countDocuments({ order_id: order._id }),
+                ]);
+
+                return {
+                    ...order.toObject(),
+                    ticketCount,
+                    productCount,
+                };
+            })
+        );
+
+        return res.status(200).json(ordersWithCounts);
+    } catch (error) {
+        console.error("Lỗi khi lấy danh sách hóa đơn:", error);
+        return res.status(500).json({ message: "Lỗi server!" });
+    }
+};
+
 const getOrderById = async (req, res) => {
     try {
         const order = await Order.findById(req.params.id);
@@ -96,6 +149,22 @@ const getOrderById = async (req, res) => {
             return res.status(404).send("Hóa đơn không tồn tại");
         }
         return res.status(201).send(order);
+    } catch (error) {
+        console.log("Lỗi server: ", error);
+        return res.status(500).send("Lỗi Server");
+    }
+};
+
+const getOrderByCode = async (req, res) => {
+    try {
+        const { ordercode } = req.params;
+        const order = await Order.findOne({ ordercode });
+        if (!order) {
+            console.log("Hóa đơn không tồn tại!");
+            return res.status(404).send("Hóa đơn không tồn tại");
+        }
+
+        return res.status(200).send(order);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
@@ -276,5 +345,6 @@ module.exports = {
     getOrderWithUserInfo,
     createOrders,
     getOrderWithInfoById,
-    getTicketAndProductByOrderId
+    getTicketAndProductByOrderId,
+    getOrderByCode
 };
