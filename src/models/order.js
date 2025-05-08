@@ -2,6 +2,11 @@ const mongoose = require("mongoose");
 
 const OrderSchema = new mongoose.Schema(
   {
+    ordercode: {
+      type: String,
+      require: true,
+      trim: true
+    },
     total_price: {
       type: Number,
       required: true
@@ -22,7 +27,8 @@ const OrderSchema = new mongoose.Schema(
     user_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Users',
-      required: true
+      required: false, // không bắt buộc
+      default: null
     },
   }
 );

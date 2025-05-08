@@ -2,8 +2,9 @@ const User = require("../models/user");
 const bcrypt = require("bcryptjs");
 
 const createUser = async (req, res) => {
+  const { email, phone, cccd, password } = req.body;
   try {
-    if (await User.isEmailTaken(req.body.email)) {
+    if (await User.isEmailTaken(email)) {
       return res.status(401).send("Email đã tồn tại vui lòng chọn email khác!");
     }
     if (await User.isPhoneTaken(phone)) {

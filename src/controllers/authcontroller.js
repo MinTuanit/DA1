@@ -1,8 +1,13 @@
 const bcrypt = require("bcryptjs");
 const User = require("../models/user");
 const Token = require("../models/token");
+const crypto = require("crypto");
+const nodemailer = require("nodemailer");
 const tokenservice = require("../services/token");
 const usercontroller = require("../controllers/usercontroller");
+const dotenv = require("dotenv");
+
+dotenv.config();
 
 const register = async (req, res) => {
     try {
@@ -63,23 +68,89 @@ const logout = (req, res) => {
     }
 };
 
-const refreshtoken = (req, res) => {
-    const { refreshToken } = req.body;
+const refreshtoken = async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
 
-    if (!refreshToken) {
-        return res.status(400).json({ message: "Không có refresh token!" });
-    }
+        if (!refreshToken) {
+            return res.status(400).json({ message: "Không có refresh token!" });
+        }
 
-    const newAccessToken = refreshAccessToken(refreshToken);
-    if (!newAccessToken) {
-        return res.status(403).json({ message: "Refresh token không hợp lệ hoặc đã hết hạn!" });
+        const newAccessToken = tokenservice.refreshAccessToken(refreshToken);
+        if (!newAccessToken) {
+            return res.status(403).json({ message: "Refresh token không hợp lệ hoặc đã hết hạn!" });
+        }
+        return res.status(200).json({ accessToken: newAccessToken });
+    } catch (error) {
+        console.error("Lỗi server:", error);
+        return res.status(500).json({ message: "Lỗi server!" });
     }
-    return res.json({ accessToken: newAccessToken });
+};
+
+const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+        user: process.env.MAIL_USERNAME,
+        pass: process.env.MAIL_PASSWORD,
+    },
+});
+
+const forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        const user = await User.findOne({ email });
+        if (!user) return res.status(404).send("Không tìm thấy người dùng");
+
+        const token = crypto.randomBytes(32).toString("hex");
+        const expireTime = Date.now() + 15 * 60 * 1000; // 15 phút
+
+        user.resetPasswordToken = token;
+        user.resetPasswordExpires = expireTime;
+        await user.save();
+
+        const resetLink = `http://localhost:3000/reset-password?token=${token}`; // link fe reset password
+
+        await transporter.sendMail({
+            from: `"Rạp Chiếu Phim" <${process.env.MAIL_USERNAME}>`,
+            to: email,
+            subject: "Yêu cầu đặt lại mật khẩu",
+            html: `<p>Click vào link sau để đặt lại mật khẩu:</p><a href="${resetLink}">${resetLink}</a>`,
+        });
+
+        return res.send("Đã gửi email đặt lại mật khẩu");
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Lỗi server");
+    }
+};
+
+const resetPassword = async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+        const user = await User.findOne({
+            resetPasswordToken: token,
+            resetPasswordExpires: { $gt: Date.now() },
+        });
+
+        if (!user) return res.status(400).send("Token không hợp lệ hoặc đã hết hạn");
+
+        user.password = await bcrypt.hash(newPassword, 8);
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        await user.save();
+
+        res.send("Đặt lại mật khẩu thành công");
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Lỗi server");
+    }
 };
 
 module.exports = {
+    register,
     login,
     logout,
     refreshtoken,
-    register
-};
+    forgotPassword,
+    resetPassword,
+};  
