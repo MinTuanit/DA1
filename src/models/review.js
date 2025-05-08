@@ -7,7 +7,7 @@ const ReviewSchema = new mongoose.Schema(
       ref: 'Users',
       required: true
     },
-    movies_id: {
+    movie_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Movies',
       required: true
