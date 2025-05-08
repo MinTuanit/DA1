@@ -36,7 +36,7 @@ const getReviewById = async (req, res) => {
 
 const getReviewByMovieId = async (req, res) => {
     try {
-        const reviews = await Review.find({ movies_id: req.params.movieid })
+        const reviews = await Review.find({ movie_id: req.params.movieid })
             .populate({
                 path: 'user_id',
                 select: 'full_name email'
@@ -82,7 +82,7 @@ const getReviewWithUserInfo = async (req, res) => {
 
         const formattedReview = {
             _id: review._id,
-            movies_id: review.movies_id,
+            movie_id: review.movies_id,
             rating: review.rating,
             comment: review.comment,
             created_at: review.created_at,
