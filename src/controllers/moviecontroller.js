@@ -4,7 +4,7 @@ const Movie = require("../models/movie");
 const createMovie = async (req, res) => {
     try {
         const movie = await Movie.create(req.body);
-        res.status(201).send(movie);
+        return res.status(201).send(movie);
     } catch (error) {
         console.log("Lỗi server! ", error);
         return res.status(500).send("Lỗi Server");
@@ -14,7 +14,7 @@ const createMovie = async (req, res) => {
 const getAllMovies = async (req, res) => {
     try {
         const movies = await Movie.find();
-        res.status(201).send(movies);
+        return res.status(201).send(movies);
     } catch (error) {
         console.log("Lỗi server! ", error);
         return res.status(500).send("Lỗi Server");
@@ -28,7 +28,7 @@ const getMovieById = async (req, res) => {
             console.log("Phim không tồn tại!");
             return res.status(404).send("Phim không tồn tại");
         }
-        res.status(201).send(movie);
+        return res.status(201).send(movie);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
@@ -60,7 +60,7 @@ const updateMovieById = async (req, res) => {
             console.log("Phim không tồn tại!");
             return res.status(404).send("Phim không tồn tại");
         }
-        res.status(200).send(movie);
+        return res.status(200).send(movie);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");

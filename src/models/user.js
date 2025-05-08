@@ -34,13 +34,6 @@ const UserSchema = new mongoose.Schema(
       trim: true,
       minlength: 8,
       private: true,
-      validate(value) {
-        if (!value.match(/\d/) || !value.match(/[a-zA-Z]/)) {
-          throw new Error(
-            "Mật khẩu phải chứa ít nhất 1 số hoặc 1 ký tự"
-          );
-        }
-      },
     },
     dateOfBirth: {
       type: Date,
@@ -65,6 +58,16 @@ const UserSchema = new mongoose.Schema(
 
 UserSchema.statics.isEmailTaken = async function (email, excludeUserId) {
   const user = await this.findOne({ email, _id: { $ne: excludeUserId } });
+  return !!user;
+};
+
+UserSchema.statics.isPhoneTaken = async function (phone, excludeUserId) {
+  const user = await this.findOne({ phone, _id: { $ne: excludeUserId } });
+  return !!user;
+};
+
+UserSchema.statics.isCccdTaken = async function (cccd, excludeUserId) {
+  const user = await this.findOne({ cccd, _id: { $ne: excludeUserId } });
   return !!user;
 };
 

@@ -6,7 +6,7 @@ const Room = require("../models/room");
 const createCinema = async (req, res) => {
   try {
     const cinema = await Cinema.create(req.body);
-    res.status(201).send(cinema);
+    return res.status(201).send(cinema);
   } catch (error) {
     console.log("Lỗi server! ", error);
     return res.status(500).send("Lỗi Server");
@@ -16,7 +16,7 @@ const createCinema = async (req, res) => {
 const getAllCinemas = async (req, res) => {
   try {
     const cinemas = await Cinema.find();
-    res.status(201).send(cinemas);
+    return res.status(201).send(cinemas);
   } catch (error) {
     console.log("Lỗi server! ", error);
     return res.status(500).send("Lỗi Server");
@@ -26,7 +26,7 @@ const getAllCinemas = async (req, res) => {
 const getCinemaById = async (req, res) => {
   try {
     const cinema = await Cinema.findById(req.params.id);
-    res.status(201).send(cinema);
+    return res.status(201).send(cinema);
   } catch (error) {
     console.log("Lỗi server: ", error);
     return res.status(500).send("Lỗi Server");
@@ -78,7 +78,7 @@ const updateCinemaById = async (req, res) => {
       console.log("Rạp chiếu phim không tồn tại!");
       return res.status(404).send("Rạp chiếu phim không tồn tại");
     }
-    res.status(200).send(cinema);
+    return res.status(200).send(cinema);
   } catch (error) {
     console.log("Lỗi server: ", error);
     return res.status(500).send("Lỗi Server");

@@ -3,7 +3,7 @@ const Payment = require("../models/payment");
 const createPayment = async (req, res) => {
     try {
         const payment = await Payment.create(req.body);
-        res.status(201).send(payment);
+        return res.status(201).send(payment);
     } catch (error) {
         console.log("Lỗi server! ", error);
         return res.status(500).send("Lỗi Server");
@@ -13,7 +13,7 @@ const createPayment = async (req, res) => {
 const getAllPayments = async (req, res) => {
     try {
         const payments = await Payment.find();
-        res.status(201).send(payments);
+        return res.status(201).send(payments);
     } catch (error) {
         console.log("Lỗi server! ", error);
         return res.status(500).send("Lỗi Server");
@@ -27,7 +27,7 @@ const getPaymentById = async (req, res) => {
             console.log("Thanh toán không tồn tại!");
             return res.status(404).send("Thanh toán không tồn tại");
         }
-        res.status(201).send(payment);
+        return res.status(201).send(payment);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
@@ -59,7 +59,7 @@ const updatePaymentById = async (req, res) => {
             console.log("Thanh toán không tồn tại!");
             return res.status(404).send("Thanh toán không tồn tại");
         }
-        res.status(200).send(payment);
+        return res.status(200).send(payment);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");

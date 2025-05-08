@@ -3,7 +3,7 @@ const Review = require("../models/review");
 const createReview = async (req, res) => {
     try {
         const review = await Review.create(req.body);
-        res.status(201).send(review);
+        return res.status(201).send(review);
     } catch (error) {
         console.log("Lỗi server! ", error);
         return res.status(500).send("Lỗi Server");
@@ -13,7 +13,7 @@ const createReview = async (req, res) => {
 const getAllReviews = async (req, res) => {
     try {
         const reviews = await Review.find();
-        res.status(201).send(reviews);
+        return res.status(201).send(reviews);
     } catch (error) {
         console.log("Lỗi server! ", error);
         return res.status(500).send("Lỗi Server");
@@ -27,7 +27,7 @@ const getReviewById = async (req, res) => {
             console.log("Bình luận không tồn tại!");
             return res.status(404).send("Bình luận không tồn tại");
         }
-        res.status(201).send(review);
+        return res.status(201).send(review);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
@@ -59,7 +59,7 @@ const getReviewByMovieId = async (req, res) => {
             }
         }));
 
-        res.status(200).json(formattedReviews);
+        return res.status(200).json(formattedReviews);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
@@ -93,10 +93,10 @@ const getReviewWithUserInfo = async (req, res) => {
             }
         };
 
-        res.json(formattedReview);
+        return res.json(formattedReview);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: "Lỗi server" });
+        return res.status(500).json({ message: "Lỗi server" });
     }
 };
 
@@ -122,7 +122,7 @@ const deleteReviewByMovieId = async (req, res) => {
             return res.status(404).send("Không có bình luận nào được tìm thấy để xóa");
         }
         console.log(`${result.deletedCount} bình luận đã được xóa.`);
-        res.status(200).send(`${result.deletedCount} bình luận đã được xóa.`);
+        return res.status(200).send(`${result.deletedCount} bình luận đã được xóa.`);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
@@ -140,7 +140,7 @@ const updateReviewById = async (req, res) => {
             console.log("Bình luận không tồn tại!");
             return res.status(404).send("Bình luận không tồn tại");
         }
-        res.status(200).send(review);
+        return res.status(200).send(review);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");

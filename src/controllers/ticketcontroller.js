@@ -3,7 +3,7 @@ const Ticket = require("../models/ticket");
 const createTicket = async (req, res) => {
     try {
         const ticket = await Ticket.create(req.body);
-        res.status(201).send(ticket);
+        return res.status(201).send(ticket);
     } catch (error) {
         console.log("Lỗi server! ", error);
         return res.status(500).send("Lỗi Server");
@@ -13,7 +13,7 @@ const createTicket = async (req, res) => {
 const getAllTickets = async (req, res) => {
     try {
         const tickets = await Ticket.find();
-        res.status(201).send(tickets);
+        return res.status(201).send(tickets);
     } catch (error) {
         console.log("Lỗi server! ", error);
         return res.status(500).send("Lỗi Server");
@@ -72,10 +72,10 @@ const getTicketById = async (req, res) => {
                 : null
         };
 
-        res.status(200).json(formatted);
+        return res.status(200).json(formatted);
     } catch (error) {
         console.error("Lỗi khi lấy vé:", error);
-        res.status(500).json({ message: "Lỗi server" });
+        return res.status(500).json({ message: "Lỗi server" });
     }
 };
 
@@ -86,7 +86,7 @@ const getTicketByUserId = async (req, res) => {
             console.log("Người dùng này không có vé nào!");
             return res.status(404).send("Người dùng này không có vé nào!");
         }
-        res.status(200).send(tickets);
+        return res.status(200).send(tickets);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
@@ -116,7 +116,7 @@ const deleteTicketByOrderId = async (req, res) => {
             return res.status(404).send("Không có vé nào được tìm thấy để xóa");
         }
         console.log(`${result.deletedCount} vé đã được xóa.`);
-        res.status(200).send(`${result.deletedCount} vé đã được xóa.`);
+        return res.status(200).send(`${result.deletedCount} vé đã được xóa.`);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
@@ -131,7 +131,7 @@ const deleteTicketByShowTimeId = async (req, res) => {
             return res.status(404).send("Không có vé nào được tìm thấy để xóa");
         }
         console.log(`${result.deletedCount} vé đã được xóa.`);
-        res.status(200).send(`${result.deletedCount} vé đã được xóa.`);
+        return res.status(200).send(`${result.deletedCount} vé đã được xóa.`);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
@@ -149,7 +149,7 @@ const updateTicketById = async (req, res) => {
             console.log("Vé không tồn tại!");
             return res.status(404).send("Vé không tồn tại");
         }
-        res.status(200).send(ticket);
+        return res.status(200).send(ticket);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");

@@ -34,10 +34,10 @@ const login = async (req, res) => {
         const accessToken = tokenservice.generateAccessToken(user);
         const refreshToken = tokenservice.generateRefreshToken(user);
 
-        res.json({ accessToken, refreshToken });
+        return res.json({ accessToken, refreshToken });
     } catch (error) {
         console.error("Lỗi server:", error);
-        res.status(500).json({ message: "Lỗi server!" });
+        return res.status(500).json({ message: "Lỗi server!" });
     }
 };
 
@@ -74,7 +74,7 @@ const refreshtoken = (req, res) => {
     if (!newAccessToken) {
         return res.status(403).json({ message: "Refresh token không hợp lệ hoặc đã hết hạn!" });
     }
-    res.json({ accessToken: newAccessToken });
+    return res.json({ accessToken: newAccessToken });
 };
 
 module.exports = {

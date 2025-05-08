@@ -45,9 +45,17 @@ const createEmployee = async (req, res) => {
             cinema_id
         } = req.body;
 
-        if (await User.isEmailTaken(email)) {
-            console.log("Email đã tồn tại!");
-            return res.status(400).send("Email đã tồn tại. Vui lòng chọn email khác để đăng ký!");
+        if (await User.isEmailTaken(req.body.email)) {
+            return res.status(401).send("Email đã tồn tại vui lòng chọn email khác!");
+        }
+        if (await User.isPhoneTaken(phone)) {
+            return res.status(400).send("Số điện thoại đã tồn tại");
+        }
+        if (await User.isCccdTaken(cccd)) {
+            return res.status(400).send("CCCD đã tồn tại");
+        }
+        if (!password.match(/\d/) || !password.match(/[a-zA-Z]/)) {
+            return res.status(401).send("Mật khẩu phải chứa ít nhất 8 ký tự và chứa 1 số và 1 chữ cái.");
         }
         const employee = await Employee.create({
             full_name,
@@ -61,10 +69,10 @@ const createEmployee = async (req, res) => {
             shift,
             cinema_id
         });
-        res.status(201).send({ employee });
+        return res.status(201).send({ employee });
     } catch (error) {
         console.error("Lỗi server!", error);
-        res.status(500).send("Đã xảy ra lỗi khi tạo nhân viên.");
+        return res.status(500).send("Đã xảy ra lỗi khi tạo nhân viên.");
     }
 };
 

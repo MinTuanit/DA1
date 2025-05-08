@@ -4,7 +4,7 @@ const Discount = require("../models/discount");
 const createDiscount = async (req, res) => {
     try {
         const discount = await Discount.create(req.body);
-        res.status(201).send(discount);
+        return res.status(201).send(discount);
     } catch (error) {
         console.log("Lỗi server! ", error);
         return res.status(500).send("Lỗi Server");
@@ -14,7 +14,7 @@ const createDiscount = async (req, res) => {
 const getAllDiscounts = async (req, res) => {
     try {
         const discounts = await Discount.find();
-        res.status(201).send(discounts);
+        return res.status(201).send(discounts);
     } catch (error) {
         console.log("Lỗi server! ", error);
         return res.status(500).send("Lỗi Server");
@@ -28,7 +28,7 @@ const getDiscountById = async (req, res) => {
             console.log("Khuyến mãi không tồn tại!");
             return res.status(404).send("Khuyến mãi không tồn tại");
         }
-        res.status(201).send(discount);
+        return res.status(201).send(discount);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
@@ -45,7 +45,7 @@ const getDiscountByCode = async (req, res) => {
             return res.status(404).send("Khuyến mãi không tồn tại");
         }
 
-        res.status(200).send(discount);
+        return res.status(200).send(discount);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
@@ -77,7 +77,7 @@ const updateDiscountById = async (req, res) => {
             console.log("Khuyến mãi không tồn tại!");
             return res.status(404).send("Khuyến mãi không tồn tại");
         }
-        res.status(200).send(discount);
+        return res.status(200).send(discount);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
