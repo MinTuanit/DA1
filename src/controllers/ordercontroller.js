@@ -1,6 +1,7 @@
 const Order = require("../models/order");
 const OrderProductDetail = require("../models/orderproductdetail");
 const Ticket = require("../models/ticket");
+const Product = require("../models/product");
 const mongoose = require('mongoose');
 
 const createOrder = async (req, res) => {
@@ -66,6 +67,26 @@ const getAllOrders = async (req, res) => {
         return res.status(500).send("Lỗi Server");
     }
 };
+
+const getTicketAndProductByOrderId = async (req, res) => {
+    try {
+        const order_id = req.params.orderid;
+
+        const [ticketCount, productCount] = await Promise.all([
+            Ticket.countDocuments({ order_id }),
+            Product.countDocuments({ order_id })
+        ]);
+        return res.json({
+            order_id,
+            ticketCount,
+            productCount
+        });
+
+    } catch (error) {
+        console.error("Lỗi khi lấy thông tin hóa đơn:", error);
+        return res.status(500).json({ message: "Lỗi server!" });
+    }
+}
 
 const getOrderById = async (req, res) => {
     try {
@@ -254,5 +275,6 @@ module.exports = {
     deleteOrderByUserId,
     getOrderWithUserInfo,
     createOrders,
-    getOrderWithInfoById
+    getOrderWithInfoById,
+    getTicketAndProductByOrderId
 };

@@ -12,7 +12,6 @@ const createUser = async (req, res) => {
   }
 };
 
-
 const getAllUsers = async (req, res) => {
   try {
     const users = await User.find();
@@ -55,6 +54,25 @@ const getUserByEmail = async (req, res) => {
   }
 };
 
+const getUserByRole = async (req, res) => {
+  try {
+    const { role } = req.params;
+    const validRoles = ['customer', 'employee'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).send("Vai trò không hợp lệ: " + role);
+    }
+    const users = await User.find({ role });
+    if (users.length === 0) {
+      console.log("Không tìm thấy người dùng với vai trò:", role);
+      return res.status(404).send("Không tìm thấy người dùng với vai trò: " + role);
+    }
+    return res.status(200).send(users);
+  } catch (error) {
+    console.log("Lỗi server:", error);
+    return res.status(500).send("Lỗi Server");
+  }
+};
+
 const deleteUserById = async (req, res) => {
   try {
     const user = await User.findByIdAndDelete(req.params.id);
@@ -93,5 +111,6 @@ module.exports = {
   getAllUsers,
   deleteUserById,
   getUserById,
-  getUserByEmail
+  getUserByEmail,
+  getUserByRole
 };

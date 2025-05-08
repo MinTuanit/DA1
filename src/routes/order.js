@@ -1,6 +1,7 @@
 const router = require("express").Router();
 const ordercontroller = require("../controllers/ordercontroller")
 
+router.get("/ticketandproduct/:orderid", ordercontroller.getTicketAndProductByOrderId);
 router.get("/", ordercontroller.getAllOrders);
 router.get("/userinfo/:orderid", ordercontroller.getOrderWithUserInfo);
 router.get("/user/:userid", ordercontroller.getOrderByUserId);

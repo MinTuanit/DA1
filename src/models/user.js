@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const validator = require("validator");
 const bcrypt = require("bcryptjs");
 
+const options = { discriminatorKey: 'kind', collection: 'users' };
+
 const UserSchema = new mongoose.Schema(
   {
     full_name: {
@@ -58,7 +60,7 @@ const UserSchema = new mongoose.Schema(
   },
   {
     timestamps: true
-  }
+  }, options
 );
 
 UserSchema.statics.isEmailTaken = async function (email, excludeUserId) {
