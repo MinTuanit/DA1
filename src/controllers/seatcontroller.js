@@ -3,7 +3,7 @@ const Seat = require("../models/seat");
 const createSeat = async (req, res) => {
     try {
         const seat = await Seat.create(req.body);
-        res.status(201).send(seat);
+        return res.status(201).send(seat);
     } catch (error) {
         console.log("Lỗi server! ", error);
         return res.status(500).send("Lỗi Server");
@@ -18,7 +18,7 @@ const createSeats = async (req, res) => {
         }
 
         const seats = await Seat.insertMany(seatsData);
-        res.status(201).send(seats);
+        return res.status(201).send(seats);
     } catch (error) {
         console.log("Lỗi server! ", error);
         return res.status(500).send("Lỗi Server");
@@ -35,17 +35,17 @@ const resetSeats = async (req, res) => {
         await Seat.deleteMany({ room_id });
         // Tạo lại ghế
         const newSeats = await Seat.insertMany(seats);
-        res.status(201).send(newSeats);
+        return res.status(201).send(newSeats);
     } catch (error) {
         console.log("Lỗi reset ghế: ", error);
-        res.status(500).send("Lỗi Server");
+        return res.status(500).send("Lỗi Server");
     }
 };
 
 const getAllSeats = async (req, res) => {
     try {
         const seats = await Seat.find();
-        res.status(201).send(seats);
+        return res.status(201).send(seats);
     } catch (error) {
         console.log("Lỗi server! ", error);
         return res.status(500).send("Lỗi Server");
@@ -59,7 +59,7 @@ const getSeatById = async (req, res) => {
             console.log("Ghế không tồn tại!");
             return res.status(404).send("Ghế không tồn tại");
         }
-        res.status(201).send(seat);
+        return res.status(201).send(seat);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
@@ -73,7 +73,7 @@ const getSeatByRoomId = async (req, res) => {
             console.log("Không có ghế trong phòng này!");
             return res.status(404).send("Không có ghế trong phòng này");
         }
-        res.status(200).send(seats);
+        return res.status(200).send(seats);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
@@ -102,7 +102,7 @@ const deleteSeatByRoomId = async (req, res) => {
             return res.status(404).send("Không có ghế nào được tìm thấy để xóa");
         }
         console.log(`${result.deletedCount} ghế đã được xóa.`);
-        res.status(200).send(`${result.deletedCount} ghế đã được xóa.`);
+        return res.status(200).send(`${result.deletedCount} ghế đã được xóa.`);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
@@ -120,7 +120,7 @@ const updateSeatById = async (req, res) => {
             console.log("Ghế không tồn tại!");
             return res.status(404).send("Ghế không tồn tại");
         }
-        res.status(200).send(seat);
+        return res.status(200).send(seat);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");

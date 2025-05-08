@@ -3,7 +3,7 @@ const ShowTime = require("../models/showtime");
 const createShowTime = async (req, res) => {
     try {
         const showtime = await ShowTime.create(req.body);
-        res.status(201).send(showtime);
+        return res.status(201).send(showtime);
     } catch (error) {
         console.log("Lỗi server! ", error);
         return res.status(500).send("Lỗi Server");
@@ -36,7 +36,7 @@ const getAllShowTimes = async (req, res) => {
             }
         }));
 
-        res.status(200).json(formattedShowtimes);
+        return res.status(200).json(formattedShowtimes);
     } catch (error) {
         console.log("Lỗi server! ", error);
         return res.status(500).send("Lỗi Server");
@@ -74,10 +74,10 @@ const getShowTimeById = async (req, res) => {
             }
         };
 
-        res.status(200).json(formattedShowtimes);
+        return res.status(200).json(formattedShowtimes);
     } catch (error) {
         console.error("Lỗi khi lấy showtime:", error);
-        res.status(500).json({ message: "Lỗi server" });
+        return res.status(500).json({ message: "Lỗi server" });
     }
 };
 
@@ -88,7 +88,7 @@ const getShowTimeByMovieId = async (req, res) => {
             console.log("Không có lịch chiếu của phim này!");
             return res.status(404).send("Không có lịch chiếu của phim này!");
         }
-        res.status(200).send(showtimes);
+        return res.status(200).send(showtimes);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
@@ -120,7 +120,7 @@ const updateShowTimeById = async (req, res) => {
             console.log("Lịch chiếu phim không tồn tại!");
             return res.status(404).send("Lịch chiếu phim không tồn tại");
         }
-        res.status(200).send(showtime);
+        return res.status(200).send(showtime);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");

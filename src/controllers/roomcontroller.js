@@ -3,9 +3,9 @@ const Room = require("../models/room");
 const createRoom = async (req, res) => {
     try {
         const room = await Room.create(req.body);
-        res.status(201).send(room);
+        return res.status(201).send(room);
     } catch (error) {
-        console.log("Lỗi server! ", error);
+        console.error("Lỗi server:", error);
         return res.status(500).send("Lỗi Server");
     }
 };
@@ -13,21 +13,23 @@ const createRoom = async (req, res) => {
 const getAllRooms = async (req, res) => {
     try {
         const rooms = await Room.find().populate({
-            path: 'cinema_id',
-            select: 'name'
+            path: "cinema_id",
+            select: "name"
         });
+
         const formattedRooms = rooms.map(room => ({
             _id: room._id,
             name: room.name,
             seat_count: room.seat_count,
             cinema: {
-                cinema_id: room.cinema_id._id,
-                name: room.cinema_id.name
+                cinema_id: room.cinema_id?._id,
+                name: room.cinema_id?.name
             }
         }));
-        res.status(200).json(formattedRooms);
+
+        return res.status(200).json(formattedRooms);
     } catch (error) {
-        console.log("Lỗi server! ", error);
+        console.error("Lỗi server:", error);
         return res.status(500).send("Lỗi Server");
     }
 };
@@ -39,9 +41,9 @@ const getRoomById = async (req, res) => {
             console.log("Phòng chiếu không tồn tại!");
             return res.status(404).send("Phòng chiếu không tồn tại");
         }
-        res.status(201).send(room);
+        return res.status(200).send(room);
     } catch (error) {
-        console.log("Lỗi server: ", error);
+        console.error("Lỗi server:", error);
         return res.status(500).send("Lỗi Server");
     }
 };
@@ -53,9 +55,9 @@ const getRoomByCinemaId = async (req, res) => {
             console.log("Không có phòng trong rạp này!");
             return res.status(404).send("Không có phòng trong rạp này");
         }
-        res.status(200).send(rooms);
+        return res.status(200).send(rooms);
     } catch (error) {
-        console.log("Lỗi server: ", error);
+        console.error("Lỗi server:", error);
         return res.status(500).send("Lỗi Server");
     }
 };
@@ -67,9 +69,9 @@ const deleteRoomById = async (req, res) => {
             console.log("Phòng chiếu không tồn tại!");
             return res.status(404).send("Phòng chiếu không tồn tại");
         }
-        else return res.status(204).send("Xóa phòng chiếu thành công");
+        return res.status(200).send("Xóa phòng chiếu thành công");
     } catch (error) {
-        console.log("Lỗi server: ", error);
+        console.error("Lỗi server:", error);
         return res.status(500).send("Lỗi Server");
     }
 };
@@ -85,9 +87,9 @@ const updateRoomById = async (req, res) => {
             console.log("Phòng chiếu không tồn tại!");
             return res.status(404).send("Phòng chiếu không tồn tại");
         }
-        res.status(200).send(room);
+        return res.status(200).send(room);
     } catch (error) {
-        console.log("Lỗi server: ", error);
+        console.error("Lỗi server:", error);
         return res.status(500).send("Lỗi Server");
     }
 };

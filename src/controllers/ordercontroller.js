@@ -7,7 +7,7 @@ const mongoose = require('mongoose');
 const createOrder = async (req, res) => {
     try {
         const order = await Order.create(req.body);
-        res.status(201).send(order);
+        return res.status(201).send(order);
     } catch (error) {
         console.log("Lỗi server! ", error);
         return res.status(500).send("Lỗi Server");
@@ -48,20 +48,20 @@ const createOrders = async (req, res) => {
 
         await session.commitTransaction();
         session.endSession();
-        res.status(201).json({ message: 'Tạo hóa đơn thành công: ', order_id: order._id });
+        return res.status(201).json({ message: 'Tạo hóa đơn thành công: ', order_id: order._id });
 
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
         console.error(error);
-        res.status(500).json({ message: 'Lỗi khi tạo hóa đơn: ', error: error.message });
+        return res.status(500).json({ message: 'Lỗi khi tạo hóa đơn: ', error: error.message });
     }
 }
 
 const getAllOrders = async (req, res) => {
     try {
         const orders = await Order.find();
-        res.status(201).send(orders);
+        return res.status(201).send(orders);
     } catch (error) {
         console.log("Lỗi server! ", error);
         return res.status(500).send("Lỗi Server");
@@ -95,7 +95,7 @@ const getOrderById = async (req, res) => {
             console.log("Hóa đơn không tồn tại!");
             return res.status(404).send("Hóa đơn không tồn tại");
         }
-        res.status(201).send(order);
+        return res.status(201).send(order);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
@@ -146,7 +146,7 @@ const getOrderWithInfoById = async (req, res) => {
             }
         }));
 
-        res.status(200).json({
+        return res.status(200).json({
             order: {
                 order_id: order._id,
                 total_price: order.total_price,
@@ -164,7 +164,7 @@ const getOrderWithInfoById = async (req, res) => {
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Lỗi khi lấy hóa đơn', error: error.message });
+        return res.status(500).json({ message: 'Lỗi khi lấy hóa đơn', error: error.message });
     }
 }
 
@@ -175,7 +175,7 @@ const getOrderByUserId = async (req, res) => {
             console.log("Không có hóa đơn của người dùng này!");
             return res.status(404).send("Không có hóa đơn của người dùng này");
         }
-        res.status(200).send(orders);
+        return res.status(200).send(orders);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
@@ -211,10 +211,10 @@ const getOrderWithUserInfo = async (req, res) => {
             }
         };
 
-        res.json(formattedOrder);
+        return res.json(formattedOrder);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: "Lỗi server" });
+        return res.status(500).json({ message: "Lỗi server" });
     }
 };
 
@@ -240,7 +240,7 @@ const deleteOrderByUserId = async (req, res) => {
             return res.status(404).send("Không có hóa đơn nào được tìm thấy để xóa");
         }
         console.log(`${result.deletedCount} hóa đơn đã được xóa.`);
-        res.status(200).send(`${result.deletedCount} hóa đơn đã được xóa.`);
+        return res.status(200).send(`${result.deletedCount} hóa đơn đã được xóa.`);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
@@ -258,7 +258,7 @@ const updateOrderById = async (req, res) => {
             console.log("Hóa đơn không tồn tại!");
             return res.status(404).send("Hóa đơn không tồn tại");
         }
-        res.status(200).send(order);
+        return res.status(200).send(order);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
