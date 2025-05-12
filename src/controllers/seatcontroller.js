@@ -1,4 +1,7 @@
 const Seat = require("../models/seat");
+const Showtime = require("../models/showtime");
+const Ticket = require("../models/ticket");
+const Room = require("../models/room");
 
 const createSeat = async (req, res) => {
     try {
@@ -80,6 +83,32 @@ const getSeatByRoomId = async (req, res) => {
     }
 };
 
+const getSeatByShowtimeId = async (req, res) => {
+    try {
+      const { showtimeid } = req.params;
+      const showtime = await Showtime.findById(showtimeid);
+      console.log(showtimeid);
+      if (!showtime) 
+      return res.status(404).json({ message: "Không tìm thấy lịch chiếu phim tương ứng" });
+      const roomId = showtime.room_id;
+      const seats = await Seat.find({ room_id: roomId });
+ 
+      const bookedTickets = await Ticket.find({ showtime_id: showtimeid }).select('seat_id');
+  
+      const bookedSeatIds = bookedTickets.map(ticket => ticket.seat_id.toString());
+
+      const seatWithAvailability = seats.map(seat => ({
+        ...seat.toObject(),
+        available: !bookedSeatIds.includes(seat._id.toString())
+      }));
+  
+      return res.status(200).json({ data: seatWithAvailability });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: 'Lỗi server' });
+    }
+};
+
 const deleteSeatById = async (req, res) => {
     try {
         const seat = await Seat.findByIdAndDelete(req.params.id);
@@ -136,5 +165,6 @@ module.exports = {
     getSeatById,
     getSeatByRoomId,
     deleteSeatByRoomId,
-    resetSeats
+    resetSeats,
+    getSeatByShowtimeId
 };

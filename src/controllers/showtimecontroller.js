@@ -1,4 +1,5 @@
 const ShowTime = require("../models/showtime");
+const Movie = require("../models/movie");
 
 const createShowTime = async (req, res) => {
     try {
@@ -15,14 +16,16 @@ const getAllShowTimes = async (req, res) => {
         const showtimes = await ShowTime.find()
             .populate({
                 path: "movie_id",
-                select: "title"
+                select: "title", 
+                strictPopulate: false 
             })
             .populate({
                 path: "room_id",
-                select: "name"
+                select: "name", 
+                strictPopulate: false 
             });
-
-        const formattedShowtimes = showtimes.map(showtime => ({
+        const filteredShowtimes = showtimes.filter(s => s.movie_id && s.room_id);
+        const formattedShowtimes = filteredShowtimes.map(showtime => ({
             _id: showtime._id,
             showtime: showtime.showtime,
             price: showtime.price,
@@ -55,7 +58,6 @@ const getShowTimeById = async (req, res) => {
                 path: "room_id",
                 select: "name"
             });
-
         if (!showtime) {
             return res.status(404).json({ message: "Không tìm thấy suất chiếu" });
         }
@@ -95,6 +97,44 @@ const getShowTimeByMovieId = async (req, res) => {
     }
 };
 
+
+const getCurrentShowtime = async (req, res) => {
+    try {
+      const now = new Date();
+  
+      const movies = await Movie.aggregate([
+        {
+          $match: {
+            status: { $in: ['Now Playing', 'Coming Soon'] }
+          }
+        },
+        {
+          $lookup: {
+            from: 'showtimes', 
+            localField: '_id',
+            foreignField: 'movie_id',
+            as: 'showtimes'
+          }
+        },
+        {
+          $addFields: {
+            showtimes: {
+              $filter: {
+                input: '$showtimes',
+                as: 'showtime',
+                cond: { $gt: ['$$showtime.showtime', now] }
+              }
+            }
+          }
+        }
+      ]);
+      return res.status(200).json({ data: movies });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: 'Server Error' });
+    }
+  };
+
 const deleteShowTimeById = async (req, res) => {
     try {
         const showtime = await ShowTime.findByIdAndDelete(req.params.id);
@@ -133,5 +173,6 @@ module.exports = {
     getAllShowTimes,
     deleteShowTimeById,
     getShowTimeById,
-    getShowTimeByMovieId
+    getShowTimeByMovieId,
+    getCurrentShowtime
 };
