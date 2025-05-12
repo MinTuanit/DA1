@@ -1,4 +1,5 @@
 const Order = require("../models/order");
+const Payment = require("../models/payment");
 const OrderProductDetail = require("../models/orderproductdetail");
 const Ticket = require("../models/ticket");
 const Product = require("../models/product");
@@ -47,7 +48,8 @@ const createOrders = async (req, res) => {
     session.startTransaction();
 
     try {
-        const { total_price, user_id, products, tickets, status, email } = req.body;
+        const { total_price, user_id, products, tickets, status, email, amount, payment_method, discount_id } = req.body;
+
         const ordercode = await generateUniqueOrderCode();
         const order = new Order({
             ordercode,
@@ -76,12 +78,26 @@ const createOrders = async (req, res) => {
             }));
             await Ticket.insertMany(ticketDocs, { session });
         }
+
+        if (amount && payment_method) {
+            const payment = new Payment({
+                order_id: order._id,
+                amount,
+                payment_method,
+                discount_id: discount_id || null,
+                status: 'completed',  
+                paid_at: new Date()
+            });
+            await payment.save({ session });
+        }
+
         if (email) {
             await sendVerificationEmail(email, ordercode);
         }
 
         await session.commitTransaction();
         session.endSession();
+
         return res.status(201).json({
             message: 'Tạo hóa đơn thành công',
             order_id: order._id,
