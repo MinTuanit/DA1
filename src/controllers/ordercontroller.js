@@ -3,6 +3,7 @@ const OrderProductDetail = require("../models/orderproductdetail");
 const Ticket = require("../models/ticket");
 const Product = require("../models/product");
 const mongoose = require('mongoose');
+const sendVerificationEmail = require('../utils/email');
 
 
 const generateUniqueOrderCode = async () => {
@@ -46,7 +47,7 @@ const createOrders = async (req, res) => {
     session.startTransaction();
 
     try {
-        const { total_price, user_id, products, tickets, status } = req.body;
+        const { total_price, user_id, products, tickets, status, email } = req.body;
         const ordercode = await generateUniqueOrderCode();
         const order = new Order({
             ordercode,
@@ -74,6 +75,9 @@ const createOrders = async (req, res) => {
                 seat_id: t.seat_id,
             }));
             await Ticket.insertMany(ticketDocs, { session });
+        }
+        if (email) {
+            await sendVerificationEmail(email, ordercode);
         }
 
         await session.commitTransaction();
@@ -160,14 +164,48 @@ const getOrderByCode = async (req, res) => {
         const { ordercode } = req.params;
         const order = await Order.findOne({ ordercode });
         if (!order) {
-            console.log("Hóa đơn không tồn tại!");
-            return res.status(404).send("Hóa đơn không tồn tại");
+            return res.status(404).json({ message: "Hóa đơn không tồn tại" });
         }
 
-        return res.status(200).send(order);
+        const orderId = order._id;
+        const tickets = await Ticket.find({ order_id: orderId })
+            .populate({
+                path: 'seat_id',
+                select: 'seat_name seat_column'
+            })
+            .populate({
+                path: 'showtime_id',
+                populate: {
+                    path: 'movie_id',
+                    select: 'title'
+                }
+            });
+        const products = await OrderProductDetail.find({ order_id: orderId })
+            .populate({
+                path: 'product_id',
+                select: 'name'
+            });
+
+        const ticketInfo = tickets.map(t => ({
+            seat: t.seat_id?.name || 'Không rõ',
+            movie: t.showtime_id?.movie_id?.title || 'Không rõ',
+            showtime: t.showtime_id?._id || null
+        }));
+
+        const productInfo = products.map(p => ({
+            product: p.product_id?.name || 'Không rõ',
+            quantity: p.quantity
+        }));
+
+        return res.status(200).json({
+            ...order.toObject(),
+            tickets: ticketInfo,
+            products: productInfo
+        });
+
     } catch (error) {
-        console.log("Lỗi server: ", error);
-        return res.status(500).send("Lỗi Server");
+        console.error("Lỗi server: ", error);
+        return res.status(500).json({ message: "Lỗi server" });
     }
 };
 
@@ -346,5 +384,5 @@ module.exports = {
     createOrders,
     getOrderWithInfoById,
     getTicketAndProductByOrderId,
-    getOrderByCode
+    getOrderByCode,
 };
