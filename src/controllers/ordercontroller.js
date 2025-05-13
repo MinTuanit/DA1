@@ -1,10 +1,14 @@
 const Order = require("../models/order");
 const Payment = require("../models/payment");
+const Cinemas = require('../models/cinema');
+const Discount = require("../models/discount");
 const OrderProductDetail = require("../models/orderproductdetail");
 const Ticket = require("../models/ticket");
+const Showtime = require("../models/showtime");
+const Seat = require("../models/seat");
 const Product = require("../models/product");
 const mongoose = require('mongoose');
-const sendVerificationEmail = require('../utils/email');
+const sendOrderConfirmationEmail = require('../utils/email');
 
 
 const generateUniqueOrderCode = async () => {
@@ -49,8 +53,8 @@ const createOrders = async (req, res) => {
 
     try {
         const { total_price, user_id, products, tickets, status, email, amount, payment_method, discount_id } = req.body;
-
         const ordercode = await generateUniqueOrderCode();
+
         const order = new Order({
             ordercode,
             total_price,
@@ -58,7 +62,6 @@ const createOrders = async (req, res) => {
             status: status || 'pending',
             ordered_at: new Date()
         });
-
         await order.save({ session });
 
         if (products && products.length > 0) {
@@ -85,14 +88,55 @@ const createOrders = async (req, res) => {
                 amount,
                 payment_method,
                 discount_id: discount_id || null,
-                status: 'completed',  
+                status: 'completed',
                 paid_at: new Date()
             });
             await payment.save({ session });
+            if (discount_id) {
+                await Discount.findByIdAndUpdate(
+                    discount_id,
+                    { $inc: { max_usage: -1 } },
+                    { session }
+                );
+            }
         }
 
-        if (email) {
-            await sendVerificationEmail(email, ordercode);
+        // Gửi email xác nhận
+        if (email && tickets && tickets.length > 0) {
+            const showtimeId = tickets[0].showtime_id;
+
+            const showtime = await Showtime.findById(showtimeId)
+                .populate({
+                    path: 'room_id',
+                    populate: {
+                        path: 'cinema_id',
+                        model: 'Cinemas'
+                    }
+                })
+                .populate('movie_id');
+
+            const populatedTickets = await Promise.all(
+                tickets.map(async t => {
+                    const seat = await Seat.findById(t.seat_id);
+                    return {
+                        seat_name: seat.seat_name,
+                        seat_column: seat.seat_column
+                    };
+                })
+            );
+
+            await sendOrderConfirmationEmail({
+                toEmail: email,
+                ordercode,
+                tickets: populatedTickets,
+                totalPrice: total_price,
+                showtime: {
+                    datetime: showtime.showtime,
+                    room_name: showtime.room_id.name
+                },
+                cinemaName: showtime.room_id.cinema_id.name,
+                movieName: showtime.movie_id.title
+            });
         }
 
         await session.commitTransaction();
