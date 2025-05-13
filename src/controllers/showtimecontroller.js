@@ -1,10 +1,60 @@
 const ShowTime = require("../models/showtime");
 const Movie = require("../models/movie");
+const { Op } = require('sequelize');
+
+// const createShowTime = async (req, res) => {
+//     try {
+//         const showtime = await ShowTime.create(req.body);
+//         return res.status(201).send(showtime);
+//     } catch (error) {
+//         console.log("Lỗi server! ", error);
+//         return res.status(500).send("Lỗi Server");
+//     }
+// };
 
 const createShowTime = async (req, res) => {
     try {
-        const showtime = await ShowTime.create(req.body);
-        return res.status(201).send(showtime);
+        const { movie_id, showtime, price, room_id } = req.body;
+
+        const movie = await Movie.findById(movie_id);
+        if (!movie) {
+            return res.status(404).send("Movie không tồn tại.");
+        }
+
+        const duration = movie.duration;
+        const newStart = new Date(showtime);
+        const newEnd = new Date(newStart);
+        newEnd.setMinutes(newEnd.getMinutes() + duration);
+
+        const existingShowtimes = await ShowTime.find({
+            room_id,
+            showtime: { $lt: newEnd }
+        }).populate('movie_id');
+
+        // Lọc ra các lịch trùng bằng cách kiểm tra showtime + duration của từng lịch cũ
+        const isOverlapping = existingShowtimes.some(existing => {
+            const existingStart = new Date(existing.showtime);
+            const existingDuration = existing.movie_id?.duration || 0;
+            const existingEnd = new Date(existingStart);
+            existingEnd.setMinutes(existingEnd.getMinutes() + existingDuration);
+
+            return newStart < existingEnd && newEnd > existingStart;
+        });
+
+        if (isOverlapping) {
+            return res.status(400).send("Lịch chiếu bị trùng với lịch chiếu khác trong phòng.");
+        }
+
+        const newShowtime = new ShowTime({
+            showtime: newStart,
+            price,
+            movie_id,
+            room_id
+        });
+
+        await newShowtime.save();
+        return res.status(201).send(newShowtime);
+
     } catch (error) {
         console.log("Lỗi server! ", error);
         return res.status(500).send("Lỗi Server");
@@ -16,13 +66,13 @@ const getAllShowTimes = async (req, res) => {
         const showtimes = await ShowTime.find()
             .populate({
                 path: "movie_id",
-                select: "title", 
-                strictPopulate: false 
+                select: "title",
+                strictPopulate: false
             })
             .populate({
                 path: "room_id",
-                select: "name", 
-                strictPopulate: false 
+                select: "name",
+                strictPopulate: false
             });
         const filteredShowtimes = showtimes.filter(s => s.movie_id && s.room_id);
         const formattedShowtimes = filteredShowtimes.map(showtime => ({
@@ -100,40 +150,40 @@ const getShowTimeByMovieId = async (req, res) => {
 
 const getCurrentShowtime = async (req, res) => {
     try {
-      const now = new Date();
-  
-      const movies = await Movie.aggregate([
-        {
-          $match: {
-            status: { $in: ['Now Playing', 'Coming Soon'] }
-          }
-        },
-        {
-          $lookup: {
-            from: 'showtimes', 
-            localField: '_id',
-            foreignField: 'movie_id',
-            as: 'showtimes'
-          }
-        },
-        {
-          $addFields: {
-            showtimes: {
-              $filter: {
-                input: '$showtimes',
-                as: 'showtime',
-                cond: { $gt: ['$$showtime.showtime', now] }
-              }
+        const now = new Date();
+
+        const movies = await Movie.aggregate([
+            {
+                $match: {
+                    status: { $in: ['Now Playing', 'Coming Soon'] }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'showtimes',
+                    localField: '_id',
+                    foreignField: 'movie_id',
+                    as: 'showtimes'
+                }
+            },
+            {
+                $addFields: {
+                    showtimes: {
+                        $filter: {
+                            input: '$showtimes',
+                            as: 'showtime',
+                            cond: { $gt: ['$$showtime.showtime', now] }
+                        }
+                    }
+                }
             }
-          }
-        }
-      ]);
-      return res.status(200).json({ data: movies });
+        ]);
+        return res.status(200).json({ data: movies });
     } catch (error) {
-      console.error(error);
-      return res.status(500).json({ message: 'Server Error' });
+        console.error(error);
+        return res.status(500).json({ message: 'Server Error' });
     }
-  };
+};
 
 const deleteShowTimeById = async (req, res) => {
     try {
