@@ -101,7 +101,10 @@ const deleteUserById = async (req, res) => {
 
 const updateUserById = async (req, res) => {
   try {
-    req.body.password = await bcrypt.hash(req.body.password, 8);
+    const password = req.body.password;
+    if (password) {
+      req.body.password = await bcrypt.hash(password, 8);
+    }
     const user = await User.findByIdAndUpdate(
       req.params.id,
       req.body,
