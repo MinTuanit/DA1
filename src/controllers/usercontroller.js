@@ -5,21 +5,22 @@ const createUser = async (req, res) => {
   const { email, phone, cccd, password } = req.body;
   try {
     if (await User.isEmailTaken(email)) {
-      return res.status(401).send("Email đã tồn tại vui lòng chọn email khác!");
+      return res.status(409).send("Email đã tồn tại vui lòng chọn email khác!");
     }
     if (await User.isPhoneTaken(phone)) {
-      return res.status(400).send("Số điện thoại đã tồn tại");
+      return res.status(409).send("Số điện thoại đã tồn tại");
     }
     if (await User.isCccdTaken(cccd)) {
-      return res.status(400).send("CCCD đã tồn tại");
+      return res.status(409).send("CCCD đã tồn tại");
     }
     if (!password.match(/\d/) || !password.match(/[a-zA-Z]/)) {
-      return res.status(401).send("Mật khẩu phải chứa ít nhất 8 ký tự và chứa 1 số và 1 chữ cái.");
+      return res.status(400).send("Mật khẩu phải chứa ít nhất 8 ký tự và chứa 1 số và 1 chữ cái.");
     }
     const user = await User.create(req.body);
     return res.status(201).json({ user });
   } catch (error) {
-    throw error;
+    console.error("Lỗi server!", error);
+    return res.status(500).send("Đã xảy ra lỗi khi tạo người dùng.");
   }
 };
 
