@@ -2,16 +2,6 @@ const ShowTime = require("../models/showtime");
 const Movie = require("../models/movie");
 const { Op } = require('sequelize');
 
-// const createShowTime = async (req, res) => {
-//     try {
-//         const showtime = await ShowTime.create(req.body);
-//         return res.status(201).send(showtime);
-//     } catch (error) {
-//         console.log("Lỗi server! ", error);
-//         return res.status(500).send("Lỗi Server");
-//     }
-// };
-
 const createShowTime = async (req, res) => {
     try {
         const { movie_id, showtime, price, room_id } = req.body;

@@ -48,22 +48,72 @@ const createEmployee = async (req, res) => {
 
 const getAllEmployees = async (req, res) => {
     try {
-        const employees = await Employee.find();
-        res.status(200).send(employees);
+        const employeesRaw = await Employee.find()
+            .populate({ path: "cinema_id", select: "name" });
+
+        const employees = employeesRaw.map(emp => {
+            const { cinema_id, ...rest } = emp.toObject();
+            return {
+                ...rest,
+                cinema: {
+                    cinema_id: cinema_id?._id,
+                    name: cinema_id?.name,
+                },
+            };
+        });
+
+        return res.status(200).send(employees);
     } catch (error) {
         console.error("Lỗi server! ", error);
-        res.status(500).send("Lỗi Server");
+        return res.status(500).send("Lỗi Server");
     }
 };
 
 const getEmployeeById = async (req, res) => {
     try {
-        const employee = await Employee.findById(req.params.id);
-        if (!employee) {
+        const employeeRaw = await Employee.findById(req.params.id)
+            .populate({ path: "cinema_id", select: "name" });
+
+        if (!employeeRaw) {
             console.log("Nhân viên không tồn tại!");
             return res.status(404).send("Không tìm thấy nhân viên có id: " + req.params.id);
         }
+
+        const { cinema_id, ...rest } = employeeRaw.toObject();
+        const employee = {
+            ...rest,
+            cinema: {
+                cinema_id: cinema_id?._id,
+                name: cinema_id?.name,
+            },
+        };
+
         res.status(200).send(employee);
+    } catch (error) {
+        console.error("Lỗi server: ", error);
+        res.status(500).send("Lỗi Server");
+    }
+};
+
+const getEmployeesByCinemaId = async (req, res) => {
+    try {
+        const cinemaId = req.params.cinemaid;
+
+        const employeesRaw = await Employee.find({ cinema_id: cinemaId })
+            .populate({ path: "cinema_id", select: "name" });
+
+        const employees = employeesRaw.map(emp => {
+            const { cinema_id, ...rest } = emp.toObject();
+            return {
+                ...rest,
+                cinema: {
+                    cinema_id: cinema_id?._id,
+                    name: cinema_id?.name,
+                },
+            };
+        });
+
+        res.status(200).send(employees);
     } catch (error) {
         console.error("Lỗi server: ", error);
         res.status(500).send("Lỗi Server");
@@ -128,5 +178,6 @@ module.exports = {
     getAllEmployees,
     getEmployeeById,
     deleteEmployeeById,
-    updateEmployeeById
+    updateEmployeeById,
+    getEmployeesByCinemaId
 };
