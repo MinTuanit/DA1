@@ -17,7 +17,7 @@ const createUser = async (req, res) => {
       return res.status(401).send("Mật khẩu phải chứa ít nhất 8 ký tự và chứa 1 số và 1 chữ cái.");
     }
     const user = await User.create(req.body);
-    return user;
+    return res.status(201).json({ user });
   } catch (error) {
     throw error;
   }
