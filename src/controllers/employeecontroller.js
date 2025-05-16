@@ -1,36 +1,6 @@
 const Employee = require("../models/employee");
 const User = require("../models/user");
 
-// const createEmployee = async (req, res) => {
-//     try {
-//         const { full_name, email, phone, password, cccd, dateOfBirth, position, shift, cinema_id } = req.body;
-//         if (await User.isEmailTaken(email)) {
-//             console.log("Email đã tồn tại!");
-//             return res.status(400).send("Email đã tồn tại. Vui lòng chọn email khác để đăng ký!");
-//         }
-//         const user = await User.create({
-//             full_name,
-//             email,
-//             phone,
-//             password,
-//             cccd,
-//             dateOfBirth,
-//             role: "employee",
-//         });
-//         const employee = await Employee.create({
-//             position,
-//             shift,
-//             employee_id: user._id,
-//             cinema_id,
-//         });
-//         if (user && employee)
-//             res.status(201).send({ user, employee });
-//     } catch (error) {
-//         console.log("Lỗi server! ", error);
-//         return res.status(500).send(error);
-//     }
-// };
-
 const createEmployee = async (req, res) => {
     try {
         const {
@@ -46,16 +16,16 @@ const createEmployee = async (req, res) => {
         } = req.body;
 
         if (await User.isEmailTaken(req.body.email)) {
-            return res.status(401).send("Email đã tồn tại vui lòng chọn email khác!");
+            return res.status(409).send("Email đã tồn tại vui lòng chọn email khác!");
         }
         if (await User.isPhoneTaken(phone)) {
-            return res.status(400).send("Số điện thoại đã tồn tại");
+            return res.status(409).send("Số điện thoại đã tồn tại");
         }
         if (await User.isCccdTaken(cccd)) {
-            return res.status(400).send("CCCD đã tồn tại");
+            return res.status(409).send("CCCD đã tồn tại");
         }
         if (!password.match(/\d/) || !password.match(/[a-zA-Z]/)) {
-            return res.status(401).send("Mật khẩu phải chứa ít nhất 8 ký tự và chứa 1 số và 1 chữ cái.");
+            return res.status(400).send("Mật khẩu phải chứa ít nhất 8 ký tự và chứa 1 số và 1 chữ cái.");
         }
         const employee = await Employee.create({
             full_name,
