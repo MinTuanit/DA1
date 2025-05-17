@@ -1,4 +1,6 @@
 const Room = require("../models/room");
+const Seat = require("../models/seat");
+const mongoose = require("mongoose");
 
 const createRoom = async (req, res) => {
     try {
@@ -7,6 +9,50 @@ const createRoom = async (req, res) => {
     } catch (error) {
         console.error("Lỗi server:", error);
         return res.status(500).send("Lỗi Server");
+    }
+};
+
+const createRoomWithSeats = async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const { cinema_id, name, seats } = req.body;
+
+        if (!cinema_id) {
+            return res.status(400).json({ message: "cinema_id is required" });
+        }
+
+        const room = new Room({
+            name,
+            seat_count: seats.length,
+            cinema_id,
+        });
+
+        await room.save({ session });
+
+        const seatDocs = seats.map(seat => ({
+            seat_name: seat.seat_name,
+            seat_column: seat.seat_column,
+            room_id: room._id
+        }));
+
+        await Seat.insertMany(seatDocs, { session });
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return res.status(201).json({
+            message: "Tạo phòng chiếu và ghế thành công",
+            room_id: room._id,
+            seats_created: seatDocs.length
+        });
+
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        console.error(error);
+        return res.status(500).json({ message: "Lỗi server", error: error.message });
     }
 };
 
@@ -63,32 +109,73 @@ const getRoomByCinemaId = async (req, res) => {
 };
 
 const deleteRoomById = async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
     try {
-        const room = await Room.findByIdAndDelete(req.params.id);
+        const roomId = req.params.id;
+        const room = await Room.findByIdAndDelete(roomId, { session });
         if (!room) {
+            await session.abortTransaction();
+            session.endSession();
             console.log("Phòng chiếu không tồn tại!");
             return res.status(404).send("Phòng chiếu không tồn tại");
         }
+
+        await Seat.deleteMany({ room_id: roomId }, { session });
+
+        await session.commitTransaction();
+        session.endSession();
+
         return res.status(200).send("Xóa phòng chiếu thành công");
     } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
         console.error("Lỗi server:", error);
         return res.status(500).send("Lỗi Server");
     }
 };
 
-const updateRoomById = async (req, res) => {
+const updateRoomWithSeatsById = async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
+        const roomId = req.params.id;
+        const { name, cinema_id, seats } = req.body;
+
         const room = await Room.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            { new: true }
+            roomId,
+            { name, cinema_id },
+            { new: true, session }
         );
         if (!room) {
-            console.log("Phòng chiếu không tồn tại!");
+            await session.abortTransaction();
+            session.endSession();
             return res.status(404).send("Phòng chiếu không tồn tại");
         }
+
+        await Seat.deleteMany({ room_id: roomId }, { session });
+
+        if (Array.isArray(seats) && seats.length > 0) {
+            const seatDocs = seats.map(seat => ({
+                seat_name: seat.seat_name,
+                seat_column: seat.seat_column,
+                room_id: roomId
+            }));
+            await Seat.insertMany(seatDocs, { session });
+        }
+
+        const seatCount = await Seat.countDocuments({ room_id: roomId }).session(session);
+        room.seat_count = seatCount;
+        await room.save({ session });
+
+        await session.commitTransaction();
+        session.endSession();
+
         return res.status(200).send(room);
     } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
         console.error("Lỗi server:", error);
         return res.status(500).send("Lỗi Server");
     }
@@ -96,9 +183,10 @@ const updateRoomById = async (req, res) => {
 
 module.exports = {
     createRoom,
-    updateRoomById,
+    updateRoomWithSeatsById,
     getAllRooms,
     deleteRoomById,
     getRoomById,
-    getRoomByCinemaId
+    getRoomByCinemaId,
+    createRoomWithSeats
 };
