@@ -90,7 +90,6 @@ const createOrders = async (req, res) => {
                 amount,
                 payment_method,
                 discount_id: discount_id || null,
-                status: 'completed',
                 paid_at: new Date()
             });
             await payment.save({ session });
@@ -654,7 +653,6 @@ const updateOrderById = async (req, res) => {
                 payment.amount = updates.amount;
                 payment.payment_method = updates.payment_method;
                 payment.discount_id = updates.discount_id || null;
-                payment.status = 'completed';
                 payment.paid_at = new Date();
                 await payment.save({ session });
             } else {
@@ -663,7 +661,6 @@ const updateOrderById = async (req, res) => {
                     amount: updates.amount,
                     payment_method: updates.payment_method,
                     discount_id: updates.discount_id || null,
-                    status: 'completed',
                     paid_at: new Date()
                 });
                 await newPayment.save({ session });

@@ -20,7 +20,7 @@ const getAllOderproducts = async (req, res) => {
     }
 };
 
-const getOderproductById = async (req, res) => {
+const getOrderproductById = async (req, res) => {
     try {
         const Orderproduct = await Oderproduct.findById(req.params.id);
         if (!Orderproduct) {
@@ -85,5 +85,6 @@ module.exports = {
     updateOderproductById,
     getAllOderproducts,
     deleteOderproductById,
-    getOderproductById
+    getOrderproductById,
+    getOrderproductByOrderId
 };

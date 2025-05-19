@@ -1,6 +1,5 @@
 const Discount = require("../models/discount");
 
-
 const createDiscount = async (req, res) => {
     try {
         const discount = await Discount.create(req.body);
