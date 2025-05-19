@@ -2,7 +2,6 @@ const Cinema = require("../models/cinema");
 const Employee = require("../models/employee");
 const Room = require("../models/room");
 
-
 const createCinema = async (req, res) => {
   try {
     const cinema = await Cinema.create(req.body);

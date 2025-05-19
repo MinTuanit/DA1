@@ -1,6 +1,5 @@
 const Movie = require("../models/movie");
 
-
 const createMovie = async (req, res) => {
     try {
         const movie = await Movie.create(req.body);
