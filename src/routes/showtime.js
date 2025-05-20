@@ -3,7 +3,7 @@ const showtimecontroller = require("../controllers/showtimecontroller");
 const auth = require("../middlewares/auth");
 
 router.get("/", auth("getShowTime"), showtimecontroller.getAllShowTimes);
-router.get("/current", auth("getShowTime"), showtimecontroller.getCurrentShowtime);
+router.get("/current", showtimecontroller.getCurrentShowtime);
 router.get("/movie/:movieid", auth("getShowTime"), showtimecontroller.getShowTimeByMovieId);
 router.get("/:id", auth("getShowTime"), showtimecontroller.getShowTimeById);
 router.post("/", auth("manageShowTime"), showtimecontroller.createShowTime);
