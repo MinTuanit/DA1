@@ -24,6 +24,10 @@ const DiscountSchema = new mongoose.Schema(
       type: Number,
       required: true
     },
+    remaining: {
+      type: Number,
+      required: true
+    },
     min_purchase: {
       type: Number,
       required: true

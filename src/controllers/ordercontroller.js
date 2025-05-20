@@ -51,21 +51,39 @@ const createOrder = async (req, res) => {
 
 const createOrders = async (req, res) => {
     const session = await mongoose.startSession();
-    session.startTransaction();
-
     try {
-        const { total_price, user_id, products, tickets, status, email, amount, payment_method, discount_id } = req.body;
+        session.startTransaction();
+
+        const {
+            total_price, user_id, products, tickets,
+            status, email, amount, payment_method, discount_id
+        } = req.body;
         const ordercode = await generateUniqueOrderCode();
 
+        // Kiểm tra ghế đã được đặt chưa
+        if (tickets && tickets.seats.length > 0) {
+            const existingTicket = await Ticket.find({
+                showtime_id: tickets.showtime_id,
+                seat_id: { $in: tickets.seats.map(seat => seat.seat_id) }
+            });
+            if (existingTicket.length > 0) {
+                return res.status(409).json({
+                    message: 'Lỗi khi tạo hóa đơn! Ghế đã được đặt chỗ.',
+                });
+            }
+        }
+
+        // Tạo Order
         const order = new Order({
             ordercode,
             total_price,
             user_id: user_id || null,
-            status: status || 'pending',
+            status: status || 'completed',
             ordered_at: new Date()
         });
         await order.save({ session });
 
+        // Thêm sản phẩm
         if (products && products.length > 0) {
             const orderProducts = products.map(p => ({
                 order_id: order._id,
@@ -75,15 +93,17 @@ const createOrders = async (req, res) => {
             await OrderProductDetail.insertMany(orderProducts, { session });
         }
 
-        if (tickets && tickets.length > 0) {
-            const ticketDocs = tickets.map(t => ({
+        // Thêm vé
+        if (tickets && tickets.seats.length > 0) {
+            const ticketDocs = tickets.seats.map(s => ({
                 order_id: order._id,
-                showtime_id: t.showtime_id,
-                seat_id: t.seat_id,
+                showtime_id: tickets.showtime_id,
+                seat_id: s.seat_id,
             }));
             await Ticket.insertMany(ticketDocs, { session });
         }
 
+        // Thanh toán
         if (amount && payment_method) {
             const payment = new Payment({
                 order_id: order._id,
@@ -93,62 +113,33 @@ const createOrders = async (req, res) => {
                 paid_at: new Date()
             });
             await payment.save({ session });
+
+            // Giảm số lượng mã giảm giá
             if (discount_id) {
                 await Discount.findByIdAndUpdate(
                     discount_id,
-                    { $inc: { max_usage: -1 } },
+                    { $inc: { remaining: -1 } },
                     { session }
                 );
             }
         }
 
-        // Gửi email xác nhận
-        if (email && tickets && tickets.length > 0) {
-            const showtimeId = tickets[0].showtime_id;
-
-            const showtime = await Showtime.findById(showtimeId)
-                .populate({
-                    path: 'room_id',
-                    populate: {
-                        path: 'cinema_id',
-                        model: 'Cinemas'
-                    }
-                })
-                .populate('movie_id');
-
-            const populatedTickets = await Promise.all(
-                tickets.map(async t => {
-                    const seat = await Seat.findById(t.seat_id);
-                    return {
-                        seat_name: seat.seat_name,
-                        seat_column: seat.seat_column
-                    };
-                })
-            );
-
-            await sendOrderConfirmationEmail({
-                toEmail: email,
-                ordercode,
-                tickets: populatedTickets,
-                totalPrice: total_price,
-                showtime: {
-                    datetime: showtime.showtime,
-                    room_name: showtime.room_id.name
-                },
-                cinemaName: showtime.room_id.cinema_id.name,
-                movieName: showtime.movie_id.title
-            });
-        }
-
         await session.commitTransaction();
-        session.endSession();
 
+        // Populate vé và sản phẩm sau khi commit
         const [populatedTickets, populatedProducts] = await Promise.all([
             Ticket.find({ order_id: order._id })
                 .populate({ path: 'seat_id', select: 'seat_name seat_column' })
                 .populate({
                     path: 'showtime_id',
-                    populate: { path: 'movie_id', select: 'title' }
+                    populate: [
+                        { path: 'movie_id', select: 'title' },
+                        {
+                            path: 'room_id',
+                            select: 'name cinema_id',
+                            populate: { path: 'cinema_id', select: 'name address' }
+                        }
+                    ]
                 }),
             OrderProductDetail.find({ order_id: order._id })
                 .populate({ path: 'product_id', select: 'name' })
@@ -160,25 +151,32 @@ const createOrders = async (req, res) => {
 
         const doc = new PDFDocument();
         doc.pipe(res);
-
-        const fontPath = path.join(__dirname, '../assets/fonts/Roboto-Regular.ttf'); // font chữ
+        const fontPath = path.join(__dirname, '../assets/fonts/Roboto-Regular.ttf');
         doc.font(fontPath);
 
         doc.fontSize(20).text('HÓA ĐƠN ĐẶT VÉ', { align: 'center' });
         doc.moveDown();
         doc.fontSize(12).text(`Mã hóa đơn: ${ordercode}`);
         doc.text(`Ngày đặt: ${formatDate(order.ordered_at)}`);
-        doc.text(`Trạng thái: ${order.status}`);
         doc.text(`Tổng tiền: ${total_price} VND`);
         doc.moveDown();
 
         if (populatedTickets.length > 0) {
+            const cinemaName = populatedTickets[0]?.showtime_id?.room_id?.cinema_id?.name;
+            const address = populatedTickets[0]?.showtime_id?.room_id?.cinema_id?.address;
+            const room = populatedTickets[0]?.showtime_id?.room_id?.name;
+            const time = populatedTickets[0]?.showtime_id?.showtime;
+            const movie = populatedTickets[0]?.showtime_id?.movie_id?.title;
+
             doc.fontSize(14).text('Vé xem phim:', { underline: true });
-            populatedTickets.forEach((t, idx) => {
-                doc.fontSize(12).text(`- ${idx + 1}. Phim: ${t.showtime_id?.movie_id?.title || ''}`);
+            doc.fontSize(13).text(`Rạp chiếu phim: ${cinemaName}`);
+            doc.fontSize(12).text(`Địa chỉ: ${address}`);
+            doc.moveDown(0.5);
+            doc.fontSize(12).text(`Phim: ${movie || ''}`);
+            doc.text(`Phòng: ${room}`);
+            doc.text(`Suất chiếu: ${formatDate(time)}`);
+            populatedTickets.forEach((t) => {
                 doc.text(`   Ghế: ${t.seat_id?.seat_name}`);
-                doc.text(`   Suất chiếu: ${formatDate(t.showtime_id?.showtime)}`);
-                doc.moveDown(0.5);
             });
         }
 
@@ -189,22 +187,22 @@ const createOrders = async (req, res) => {
                 doc.fontSize(12).text(`- ${idx + 1}. ${p.product_id?.name} x${p.quantity}`);
             });
         }
+
         doc.end();
-        // return res.status(201).json({
-        //     message: 'Tạo hóa đơn thành công',
-        //     order_id: order._id,
-        //     ordercode
-        // });
     } catch (error) {
-        await session.abortTransaction();
-        session.endSession();
+        if (session.inTransaction()) {
+            await session.abortTransaction();
+        }
         console.error(error);
-        return res.status(500).json({
+        res.status(500).json({
             message: 'Lỗi khi tạo hóa đơn',
             error: error.message
         });
+    } finally {
+        session.endSession();
     }
 };
+
 
 const getTicketAndProductByOrderId = async (req, res) => {
     try {
@@ -367,7 +365,14 @@ const getOrderByCode = async (req, res) => {
                 .populate({ path: 'seat_id', select: 'seat_name seat_column' })
                 .populate({
                     path: 'showtime_id',
-                    populate: { path: 'movie_id', select: 'title' }
+                    populate: [
+                        { path: 'movie_id', select: 'title' },
+                        {
+                            path: 'room_id',
+                            select: 'name cinema_id',
+                            populate: { path: 'cinema_id', select: 'name address' }
+                        }
+                    ]
                 }),
             OrderProductDetail.find({ order_id: order._id })
                 .populate({ path: 'product_id', select: 'name' })
@@ -379,24 +384,32 @@ const getOrderByCode = async (req, res) => {
         const doc = new PDFDocument();
         doc.pipe(res);
 
-        const fontPath = path.join(__dirname, '../assets/fonts/Roboto-Regular.ttf'); // sửa đường dẫn nếu cần
+        const fontPath = path.join(__dirname, '../assets/fonts/Roboto-Regular.ttf');
         doc.font(fontPath);
 
         doc.fontSize(20).text('HÓA ĐƠN ĐẶT VÉ', { align: 'center' });
         doc.moveDown();
         doc.fontSize(12).text(`Mã hóa đơn: ${ordercode}`);
         doc.text(`Ngày đặt: ${formatDate(order.ordered_at)}`);
-        doc.text(`Trạng thái: ${order.status}`);
         doc.text(`Tổng tiền: ${order.total_price} VND`);
         doc.moveDown();
 
         if (populatedTickets.length > 0) {
+            const cinemaName = populatedTickets[0]?.showtime_id?.room_id?.cinema_id?.name;
+            const address = populatedTickets[0]?.showtime_id?.room_id?.cinema_id?.address;
+            const room = populatedTickets[0]?.showtime_id?.room_id?.name;
+            const time = populatedTickets[0]?.showtime_id?.showtime;
+            const movie = populatedTickets[0]?.showtime_id?.movie_id?.title;
+
             doc.fontSize(14).text('Vé xem phim:', { underline: true });
-            populatedTickets.forEach((t, idx) => {
-                doc.fontSize(12).text(`- ${idx + 1}. Phim: ${t.showtime_id?.movie_id?.title || ''}`);
+            doc.fontSize(13).text(`Rạp chiếu phim: ${cinemaName}`);
+            doc.fontSize(12).text(`Địa chỉ: ${address}`);
+            doc.moveDown(0.5);
+            doc.fontSize(12).text(`Phim: ${movie || ''}`);
+            doc.text(`Phòng: ${room}`);
+            doc.text(`Suất chiếu: ${formatDate(time)}`);
+            populatedTickets.forEach((t) => {
                 doc.text(`   Ghế: ${t.seat_id?.seat_name}`);
-                doc.text(`   Suất chiếu: ${formatDate(t.showtime_id?.showtime)}`);
-                doc.moveDown(0.5);
             });
         }
 
@@ -407,6 +420,7 @@ const getOrderByCode = async (req, res) => {
                 doc.fontSize(12).text(`- ${idx + 1}. ${p.product_id?.name} x${p.quantity}`);
             });
         }
+
         doc.end();
     } catch (error) {
         console.error("Lỗi server: ", error);
