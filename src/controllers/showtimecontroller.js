@@ -1,6 +1,5 @@
 const ShowTime = require("../models/showtime");
 const Movie = require("../models/movie");
-const { Op } = require('sequelize');
 
 const createShowTime = async (req, res) => {
     try {
@@ -125,18 +124,45 @@ const getShowTimeById = async (req, res) => {
 
 const getShowTimeByMovieId = async (req, res) => {
     try {
-        const showtimes = await ShowTime.find({ movie_id: req.params.movieid });
-        if (!showtimes || showtimes.length === 0) {
+        const showtimes = await ShowTime.find({ movie_id: req.params.movieid })
+            .populate({
+                path: "movie_id",
+                select: "title",
+                strictPopulate: false
+            })
+            .populate({
+                path: "room_id",
+                select: "name",
+                strictPopulate: false
+            });
+
+        const filteredShowtimes = showtimes.filter(s => s.movie_id && s.room_id);
+
+        if (filteredShowtimes.length === 0) {
             console.log("Không có lịch chiếu của phim này!");
             return res.status(404).send("Không có lịch chiếu của phim này!");
         }
-        return res.status(200).send(showtimes);
+
+        const formattedShowtimes = filteredShowtimes.map(showtime => ({
+            _id: showtime._id,
+            showtime: showtime.showtime,
+            price: showtime.price,
+            movie: {
+                movie_id: showtime.movie_id._id,
+                title: showtime.movie_id.title
+            },
+            room: {
+                room_id: showtime.room_id._id,
+                name: showtime.room_id.name
+            }
+        }));
+
+        return res.status(200).json(formattedShowtimes);
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
     }
 };
-
 
 const getCurrentShowtime = async (req, res) => {
     try {
