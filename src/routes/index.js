@@ -14,6 +14,7 @@ const ticketRoute = require("./ticket");
 const orderRoute = require("./order");
 const orderproductRoute = require("./orderproductdetail");
 const paymentRoute = require("./payment");
+const settingRoute = require("./setting");
 
 const router = express.Router();
 
@@ -78,6 +79,10 @@ const defaultRoutes = [
     path: "/payment",
     route: paymentRoute,
   },
+  {
+    path: "/setting",
+    route: settingRoute,
+  }
 ];
 
 defaultRoutes.forEach((route) => {

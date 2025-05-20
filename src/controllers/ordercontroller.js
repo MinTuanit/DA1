@@ -161,7 +161,7 @@ const createOrders = async (req, res) => {
         const doc = new PDFDocument();
         doc.pipe(res);
 
-        const fontPath = path.join(__dirname, '../assets/fonts/Roboto-Regular.ttf'); // sửa đường dẫn nếu cần
+        const fontPath = path.join(__dirname, '../assets/fonts/Roboto-Regular.ttf'); // font chữ
         doc.font(fontPath);
 
         doc.fontSize(20).text('HÓA ĐƠN ĐẶT VÉ', { align: 'center' });
@@ -274,7 +274,13 @@ const getAllOrders = async (req, res) => {
                     ...order.toObject(),
                     ticketCount: tickets.length,
                     productCount: orderProducts.length,
-                    tickets: ticketDetails,
+                    tickets: ticketDetails.length > 0 ? {
+                        title: ticketDetails[0].title || '',
+                        showtime: ticketDetails[0].showtime || '',
+                        price: ticketDetails[0].price || 0,
+                        seats: ticketDetails.flatMap(t => t.seats || []),
+                    } : null,
+
                     products: productDetails
                 };
             })
