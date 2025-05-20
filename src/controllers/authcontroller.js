@@ -39,7 +39,7 @@ const login = async (req, res) => {
         const accessToken = tokenservice.generateAccessToken(user);
         const refreshToken = tokenservice.generateRefreshToken(user);
 
-        return res.json({ accessToken, refreshToken });
+        return res.json({ accessToken, refreshToken, user_id: user._id });
     } catch (error) {
         console.error("Lỗi server:", error);
         return res.status(500).json({ message: "Lỗi server!" });
