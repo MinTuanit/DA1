@@ -40,7 +40,7 @@ const buildOrderEmailHtml = (ordercode, tickets, totalPrice, showtime, cinemaNam
         </table>
 
         <p style="text-align: right;"><strong>Tổng tiền:</strong> ${totalPrice.toLocaleString('vi-VN')} VNĐ</p>
-        <p>Cảm ơn Quý khách đã xem phim tại <strong>Cinestar</strong>. Chúc Quý khách một buổi xem phim vui vẻ.</p>
+        <p>Cảm ơn Quý khách đã xem phim tại <strong>${cinemaName}</strong>. Chúc Quý khách một buổi xem phim vui vẻ.</p>
     </div>
     `;
 };

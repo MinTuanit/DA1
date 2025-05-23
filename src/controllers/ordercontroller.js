@@ -145,6 +145,34 @@ const createOrders = async (req, res) => {
                 .populate({ path: 'product_id', select: 'name' })
         ]);
 
+        // Gửi email xác nhận
+        if (email) {
+            try {
+                const showtime = populatedTickets[0]?.showtime_id;
+                const cinemaName = showtime?.room_id?.cinema_id?.name;
+                const movieName = showtime?.movie_id?.title;
+
+                const simplifiedTickets = populatedTickets.map(t => ({
+                    seat_name: t.seat_id?.seat_name
+                }));
+
+                await sendOrderConfirmationEmail({
+                    toEmail: email,
+                    ordercode,
+                    tickets: simplifiedTickets,
+                    totalPrice: total_price,
+                    showtime: {
+                        datetime: showtime?.showtime,
+                        room_name: showtime?.room_id?.name
+                    },
+                    cinemaName,
+                    movieName
+                });
+            } catch (emailErr) {
+                console.error("Lỗi khi gửi email xác nhận:", emailErr.message);
+            }
+        }
+
         // === TẠO FILE PDF ===
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `inline; filename=hoadon_${ordercode}.pdf`);
