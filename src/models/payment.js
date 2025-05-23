@@ -14,8 +14,9 @@ const PaymentSchema = new mongoose.Schema(
     payment_method: {
       type: String,
       enum: [
-        'credit_card',
-        'paypal',
+        'momo',
+        'banking',
+        'visa/mastercard',
         'cash'
       ],
       required: true
