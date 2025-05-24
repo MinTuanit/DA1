@@ -222,7 +222,7 @@ const createOrders = async (req, res) => {
             await session.abortTransaction();
         }
         console.error(error);
-        res.status(500).json({
+        return res.status(500).json({
             message: 'Lỗi khi tạo hóa đơn',
             error: error.message
         });
