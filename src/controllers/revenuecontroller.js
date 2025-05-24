@@ -6,6 +6,7 @@ const Payment = require("../models/payment");
 const OrderProductDetail = require("../models/orderproductdetail");
 const mongoose = require("mongoose");
 const Product = require('../models/product');
+const Discount = require('../models/discount');
 
 const getAll = async (req, res) => {
     try {
@@ -230,9 +231,121 @@ const getRevenueReport = async (req, res) => {
     }
 };
 
+const getDailyTicketRevenueByMovie = async (req, res) => {
+    const { movie_id, startDate, endDate } = req.body;
+
+    if (!movie_id || !startDate || !endDate) {
+        return res.status(400).json({ error: "Thiếu movie_id hoặc khoảng thời gian" });
+    }
+
+    const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+    const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+    const start = new Date(startYear, startMonth - 1, startDay, 0, 0, 0, 0);
+    const end = new Date(endYear, endMonth - 1, endDay, 23, 59, 59, 999);
+
+    const allTickets = await Ticket.find()
+        .populate({
+            path: 'order_id',
+            match: { ordered_at: { $gte: start, $lte: end } }
+        })
+        .populate({
+            path: 'showtime_id',
+            populate: { path: 'movie_id' }
+        });
+
+    const validTickets = allTickets.filter(t =>
+        t.order_id && t.showtime_id && t.showtime_id.movie_id &&
+        t.showtime_id.movie_id._id.toString() === movie_id
+    );
+
+    const dayResults = [];
+
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dayStart = new Date(d);
+        const dayEnd = new Date(d);
+        dayStart.setHours(0, 0, 0, 0);
+        dayEnd.setHours(23, 59, 59, 999);
+
+        const dayTickets = validTickets.filter(t => {
+            const orderedAt = new Date(t.order_id.ordered_at);
+            return orderedAt >= dayStart && orderedAt <= dayEnd;
+        });
+
+        const ticketRevenue = dayTickets.reduce((sum, t) => sum + t.showtime_id.price, 0);
+        const ticketCount = dayTickets.length;
+
+        dayResults.push({
+            date: dayStart.toLocaleDateString('en-CA'),
+            ticketRevenue,
+            ticketCount
+        });
+    }
+
+    return res.status(200).json(dayResults);
+};
+
+const getDailyProductSalesByProduct = async (req, res) => {
+    const { product_id, startDate, endDate } = req.body;
+
+    if (!product_id || !startDate || !endDate) {
+        return res.status(400).json({ error: "Thiếu product_id hoặc khoảng thời gian" });
+    }
+
+    const product = await Product.findById(product_id);
+    if (!product) {
+        return res.status(404).json({ error: "Không tìm thấy sản phẩm" });
+    }
+
+    const price = product.price;
+
+    const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+    const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+    const start = new Date(startYear, startMonth - 1, startDay, 0, 0, 0, 0);
+    const end = new Date(endYear, endMonth - 1, endDay, 23, 59, 59, 999);
+
+    const allOrderProducts = await OrderProductDetail.find()
+        .populate({
+            path: 'order_id',
+            match: { ordered_at: { $gte: start, $lte: end } }
+        })
+        .populate('product_id');
+
+    const validOrderProducts = allOrderProducts.filter(opd =>
+        opd.order_id &&
+        opd.product_id &&
+        opd.product_id._id.toString() === product_id
+    );
+
+    const dayResults = [];
+
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dayStart = new Date(d);
+        const dayEnd = new Date(d);
+        dayStart.setHours(0, 0, 0, 0);
+        dayEnd.setHours(23, 59, 59, 999);
+
+        const dayProducts = validOrderProducts.filter(opd => {
+            const orderedAt = new Date(opd.order_id.ordered_at);
+            return orderedAt >= dayStart && orderedAt <= dayEnd;
+        });
+
+        const totalFoodQuantity = dayProducts.reduce((sum, item) => sum + item.quantity, 0);
+        const foodRevenue = totalFoodQuantity * price;
+
+        dayResults.push({
+            date: dayStart.toLocaleDateString('en-CA'),
+            totalFoodQuantity,
+            foodRevenue
+        });
+    }
+
+    return res.status(200).json(dayResults);
+};
 
 module.exports = {
     getAll,
     getRevenueReport,
-    getAllRevenueReport
+    getAllRevenueReport,
+    getDailyTicketRevenueByMovie,
+    getDailyProductSalesByProduct
 };
