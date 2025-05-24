@@ -2,24 +2,44 @@ const mongoose = require("mongoose");
 
 const ConstraintSchema = new mongoose.Schema(
     {
-        min_price: {
+        min_ticket_price: {
             type: Number,
             required: true
         },
-        max_price: {
+        max_ticket_price: {
             type: Number,
             required: true
         },
-        time_skip: {
-            type: Number, // số phút giữa 2 suất chiếu để dọn dẹp
+        min_product_price: {
+            type: Number,
             required: true
         },
-        max_order_seat: {
+        max_product_price: {
+            type: Number,
+            required: true
+        },
+        open_time: {
+            type: String,
+            required: true
+        },  
+        close_time: {
+            type: String,
+            required: true
+        },
+        time_gap: {
+            type: Number,
+            required: true
+        },
+        employee_min_age: {
+            type: Number,
+            required: true
+        },
+        employee_max_age: {
             type: Number,
             required: true
         },
         reservation_time: {
-            type: Number, // số phút giữ vé
+            type: Number,
             required: true
         },
     }
