@@ -77,7 +77,7 @@ const getAllRevenueReport = async (req, res) => {
         });
 
         const totalRevenue = payments.reduce((sum, p) => sum + p.amount, 0);
-        const foodRevenue = totalRevenue - ticketRevenue;
+        const productRevenue = totalRevenue - ticketRevenue;
 
         // --- Sản phẩm đồ ăn ---
         const orderProductDetails = await OrderProductDetail.find()
@@ -89,7 +89,7 @@ const getAllRevenueReport = async (req, res) => {
 
         const validOrderProducts = orderProductDetails.filter(opd => opd.order_id && opd.product_id);
 
-        const totalFoodQuantity = validOrderProducts.reduce((sum, item) => sum + item.quantity, 0);
+        const totalProductQuantity = validOrderProducts.reduce((sum, item) => sum + item.quantity, 0);
 
         // Nhóm theo tên sản phẩm
         const productSales = {};
@@ -104,9 +104,9 @@ const getAllRevenueReport = async (req, res) => {
 
         return res.status(200).json({
             ticketRevenue,
-            foodRevenue,
+            productRevenue,
             ticketCount,
-            totalFoodQuantity,
+            totalProductQuantity,
             totalRevenue,
             productSales,
             movieSales
@@ -192,7 +192,7 @@ const getRevenueReport = async (req, res) => {
             validOrderProducts = validOrderProducts.filter(opd => opd.product_id._id.toString() === product_id);
         }
 
-        const totalFoodQuantity = validOrderProducts.reduce((sum, item) => sum + item.quantity, 0);
+        const totalProductQuantity = validOrderProducts.reduce((sum, item) => sum + item.quantity, 0);
 
         const productSales = {};
         validOrderProducts.forEach(item => {
@@ -210,7 +210,7 @@ const getRevenueReport = async (req, res) => {
             const productName = validOrderProducts[0]?.product_id?.name || 'Unknown';
             response.product = {
                 name: productName,
-                quantity: totalFoodQuantity
+                quantity: totalProductQuantity
             };
         }
 
@@ -329,13 +329,13 @@ const getDailyProductSalesByProduct = async (req, res) => {
             return orderedAt >= dayStart && orderedAt <= dayEnd;
         });
 
-        const totalFoodQuantity = dayProducts.reduce((sum, item) => sum + item.quantity, 0);
-        const foodRevenue = totalFoodQuantity * price;
+        const totalProductQuantity = dayProducts.reduce((sum, item) => sum + item.quantity, 0);
+        const productRevenue = totalProductQuantity * price;
 
         dayResults.push({
             date: dayStart.toLocaleDateString('en-CA'),
-            totalFoodQuantity,
-            foodRevenue
+            totalProductQuantity,
+            productRevenue
         });
     }
 
