@@ -11,7 +11,7 @@ const fileContent = fs.readFileSync(filePath, 'utf8');
 const chatbot = async (req, res) => {
     try {
         const userMessage = req.body.message;
-        const prompt = `Bạn là trợ lý của rạp chiếu phim. Dưới đây là toàn bộ dữ liệu nội bộ:\n\n"${fileContent}"\n\nChỉ sử dụng nội dung trên để trả lời câu hỏi. Không được bịa thêm thông tin hoặc suy diễn. Nếu không có dữ liệu phù hợp, hãy nói rõ là bạn không có đủ thông tin.`;
+        const prompt = `${fileContent}`;
         const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
             model: 'anthropic/claude-3-haiku:beta',
             messages: [
