@@ -12,10 +12,40 @@ const createReview = async (req, res) => {
 
 const getAllReviews = async (req, res) => {
     try {
-        const reviews = await Review.find();
-        return res.status(201).send(reviews);
+        const reviews = await Review.find()
+            .populate({
+                path: 'user_id',
+                select: 'full_name email'
+            })
+            .populate({
+                path: 'movie_id',
+                select: 'title'
+            });
+
+        if (!reviews || reviews.length === 0) {
+            console.log("Không có bình luận nào!");
+            return res.status(404).send("Không có bình luận nào!");
+        }
+
+        const formattedReviews = reviews.map(review => ({
+            _id: review._id,
+            rating: review.rating,
+            comment: review.comment,
+            created_at: review.created_at,
+            user: review.user_id ? {
+                user_id: review.user_id._id,
+                full_name: review.user_id.full_name,
+                email: review.user_id.email
+            } : null,
+            movie: review.movie_id ? {
+                movie_id: review.movie_id._id,
+                title: review.movie_id.title
+            } : null
+        }));
+
+        return res.status(200).json(formattedReviews);
     } catch (error) {
-        console.log("Lỗi server! ", error);
+        console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
     }
 };
