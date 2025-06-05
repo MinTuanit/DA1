@@ -1,8 +1,18 @@
 const Review = require("../models/review");
+const Movie = require("../models/movie");
 
 const createReview = async (req, res) => {
     try {
         const review = await Review.create(req.body);
+
+        // --- Update movie rating ---
+        const movieId = review.movie_id;
+        const reviews = await Review.find({ movie_id: movieId });
+
+        const avgRating =
+            reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / (reviews.length || 1);
+
+        await Movie.findByIdAndUpdate(movieId, { rating: avgRating });
         return res.status(201).send(review);
     } catch (error) {
         console.log("Lỗi server! ", error);
@@ -78,16 +88,16 @@ const getReviewByMovieId = async (req, res) => {
         }
 
         const formattedReviews = reviews.map(review => ({
-            _id: review._id,
-            rating: review.rating,
-            comment: review.comment,
-            created_at: review.created_at,
-            user: {
-                user_id: review.user_id._id,
-                full_name: review.user_id.full_name,
-                email: review.user_id.email
-            }
-        }));
+    _id: review._id,
+    rating: review.rating,
+    comment: review.comment,
+    created_at: review.created_at,
+    user: review.user_id ? {
+        user_id: review.user_id._id,
+        full_name: review.user_id.full_name,
+        email: review.user_id.email
+    } : null
+}));
 
         return res.status(200).json(formattedReviews);
     } catch (error) {
