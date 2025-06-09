@@ -6,7 +6,7 @@ router.get("/email", auth("getUser"), usercontroller.getUserByEmail);
 router.get("/role/:role"/*, auth("getUser")*/, usercontroller.getUserByRole);
 router.get("/", auth("manageUser"), usercontroller.getAllUsers);
 router.get("/:id", auth("getUser"), usercontroller.getUserById);
-router.post("/", auth("getUser"), usercontroller.createUser);
+router.post("/", usercontroller.createUser);
 router.patch("/:id", auth("getUser"), usercontroller.updateUserById);
 router.delete("/:id", auth("getUser"), usercontroller.deleteUserById);
 

@@ -12,13 +12,6 @@ dotenv.config();
 const register = async (req, res) => {
     try {
         const user = await usercontroller.createUser(req, res);
-        const tokens = await tokenservice.generateAuthTokens(user);
-        return res.status(201).json({
-            id: user._id,
-            email: user.email,
-            name: user.name,
-            tokens
-        });
     } catch (error) {
         return res.status(400).json({ message: error.message });
     }

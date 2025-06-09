@@ -132,6 +132,7 @@ const createOrders = async (req, res) => {
                 .populate({ path: 'seat_id', select: 'seat_name seat_column' })
                 .populate({
                     path: 'showtime_id',
+                    select: 'price showtime',
                     populate: [
                         { path: 'movie_id', select: 'title' },
                         {
@@ -153,7 +154,8 @@ const createOrders = async (req, res) => {
                 const movieName = showtime?.movie_id?.title;
 
                 const simplifiedTickets = populatedTickets.map(t => ({
-                    seat_name: t.seat_id?.seat_name
+                    seat_name: t.seat_id?.seat_name,
+                    price: t.showtime_id?.price,
                 }));
 
                 await sendOrderConfirmationEmail({
@@ -292,7 +294,9 @@ const getAllOrders = async (req, res) => {
                     return {
                         product_id: product.product_id?._id || null,
                         name: product.product_id?.name || '',
-                        quantity: product.quantity
+                        price: product.product_id?.price || '',
+                        quantity: product.quantity,
+                        total: product.product_id?.price * product.quantity || 0
                     };
                 });
 

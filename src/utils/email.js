@@ -9,8 +9,7 @@ const buildOrderEmailHtml = (ordercode, tickets, totalPrice, showtime, cinemaNam
             <td style="text-align: center;">${index + 1}</td>
             <td style="text-align: center;">Ghế ${t.seat_name}</td>
             <td style="text-align: center;">1</td>
-            <td style="text-align: center;">45000</td>
-            <td style="text-align: center;">45000</td>
+            <td style="text-align: center;">${t.price}</td>
         </tr>
     `).join('');
 
@@ -31,7 +30,6 @@ const buildOrderEmailHtml = (ordercode, tickets, totalPrice, showtime, cinemaNam
                     <th>Mặt hàng</th>
                     <th>Số lượng</th>
                     <th>Đơn giá</th>
-                    <th>Thành tiền</th>
                 </tr>
             </thead>
             <tbody>

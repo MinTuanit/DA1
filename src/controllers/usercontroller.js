@@ -92,7 +92,7 @@ const deleteUserById = async (req, res) => {
       console.log("Tài khoản không tồn tại!");
       return res.status(404).send("Không tìm thấy tài khoản có id:" + req.params.id);
     }
-    else return res.status(204).send("Xóa tài khoản thành công");
+    else return res.status(200).send("Xóa tài khoản thành công");
   } catch (error) {
     console.log("Lỗi server: ", error);
     return res.status(500).send("Lỗi Server");
