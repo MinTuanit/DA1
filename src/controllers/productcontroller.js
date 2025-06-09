@@ -1,7 +1,20 @@
 const Product = require("../models/product");
+const Setting = require("../models/constraint");
 
 const createProduct = async (req, res) => {
   try {
+    const setting = await Setting.findOne();
+    if (!setting) {
+      return res.status(500).send("Không tìm thấy cài đặt hệ thống.");
+    }
+
+    // ràng buộc giá sp
+    const { min_product_price, max_product_price } = setting;
+    const price = req.body.price;
+    if (price < min_product_price || price > max_product_price) {
+      return res.status(400).send(`Giá sản phẩm phải nằm trong khoảng ${min_product_price} đến ${max_product_price} VND`);
+    }
+
     const product = await Product.create(req.body);
     return res.status(201).send(product);
   } catch (error) {
@@ -50,6 +63,17 @@ const deleteProductById = async (req, res) => {
 
 const updateProductById = async (req, res) => {
   try {
+    const setting = await Setting.findOne();
+    if (!setting) {
+      return res.status(500).send("Không tìm thấy cài đặt hệ thống.");
+    }
+
+    // ràng buộc giá sp
+    const { min_product_price, max_product_price } = setting;
+    const price = req.body.price;
+    if (price < min_product_price || price > max_product_price) {
+      return res.status(400).send(`Giá sản phẩm phải nằm trong khoảng ${min_product_price} đến ${max_product_price} VND`);
+    }
     const product = await Product.findByIdAndUpdate(
       req.params.id,
       req.body,

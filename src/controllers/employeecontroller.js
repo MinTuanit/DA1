@@ -1,5 +1,6 @@
 const Employee = require("../models/employee");
 const User = require("../models/user");
+const Setting = require("../models/constraint");
 
 const createEmployee = async (req, res) => {
     try {
@@ -15,7 +16,8 @@ const createEmployee = async (req, res) => {
             cinema_id
         } = req.body;
 
-        if (await User.isEmailTaken(req.body.email)) {
+        // Kiểm tra trùng thông tin
+        if (await User.isEmailTaken(email)) {
             return res.status(409).send("Email đã tồn tại vui lòng chọn email khác!");
         }
         if (await User.isPhoneTaken(phone)) {
@@ -24,9 +26,32 @@ const createEmployee = async (req, res) => {
         if (await User.isCccdTaken(cccd)) {
             return res.status(409).send("CCCD đã tồn tại");
         }
+
+        // Kiểm tra định dạng mật khẩu
         if (!password.match(/\d/) || !password.match(/[a-zA-Z]/)) {
             return res.status(400).send("Mật khẩu phải chứa ít nhất 8 ký tự và chứa 1 số và 1 chữ cái.");
         }
+
+        const setting = await Setting.findOne();
+        if (!setting) {
+            return res.status(500).send("Không tìm thấy cài đặt hệ thống.");
+        }
+
+        const { employee_min_age, employee_max_age } = setting;
+
+        // Tính tuổi nhân viên
+        const birthDate = new Date(dateOfBirth);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+
+        if (age < employee_min_age || age > employee_max_age) {
+            return res.status(400).send(`Tuổi nhân viên phải nằm trong khoảng từ ${employee_min_age} đến ${employee_max_age}.`);
+        }
+
         const employee = await Employee.create({
             full_name,
             email,
@@ -39,6 +64,7 @@ const createEmployee = async (req, res) => {
             shift,
             cinema_id
         });
+
         return res.status(201).send({ employee });
     } catch (error) {
         console.error("Lỗi server!", error);
@@ -148,6 +174,26 @@ const updateEmployeeById = async (req, res) => {
             shift,
             cinema_id
         } = req.body;
+
+        const setting = await Setting.findOne();
+        if (!setting) {
+            return res.status(500).send("Không tìm thấy cài đặt hệ thống.");
+        }
+
+        const { employee_min_age, employee_max_age } = setting;
+
+        // Tính tuổi nhân viên
+        const birthDate = new Date(dateOfBirth);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+
+        if (age < employee_min_age || age > employee_max_age) {
+            return res.status(400).send(`Tuổi nhân viên phải nằm trong khoảng từ ${employee_min_age} đến ${employee_max_age}.`);
+        }
 
         const employee = await Employee.findById(req.params.id);
         if (!employee) {
