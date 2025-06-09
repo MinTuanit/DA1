@@ -1,37 +1,66 @@
 const ShowTime = require("../models/showtime");
 const Movie = require("../models/movie");
+const Setting = require("../models/constraint");
+const { parseTimeToDate } = require('../utils/parseTimeToDate');
 
 const createShowTime = async (req, res) => {
     try {
         const { movie_id, showtime, price, room_id } = req.body;
+
+        const setting = await Setting.findOne();
+        if (!setting) {
+            return res.status(500).send("Không tìm thấy cài đặt hệ thống.");
+        }
+
+        // ràng buộc giá vé
+        const { min_ticket_price, max_ticket_price, time_gap, open_time, close_time } = setting;
+        if (price < min_ticket_price || price > max_ticket_price) {
+            return res.status(400).send(`Giá vé phải nằm trong khoảng từ ${min_ticket_price} đến ${max_ticket_price}.`);
+        }
 
         const movie = await Movie.findById(movie_id);
         if (!movie) {
             return res.status(404).send("Movie không tồn tại.");
         }
 
+        // ràng buộc thời gian giữa các bộ phim
         const duration = movie.duration;
         const newStart = new Date(showtime);
         const newEnd = new Date(newStart);
         newEnd.setMinutes(newEnd.getMinutes() + duration);
+
+        const openTime = parseTimeToDate(newStart, open_time);
+        const closeTime = parseTimeToDate(newStart, close_time);
+
+        // Nếu close_time nhỏ hơn open_time, nghĩa là đóng cửa vào hôm sau
+        if (closeTime <= openTime) {
+            closeTime.setDate(closeTime.getDate() + 1);
+        }
+
+        if (newStart < openTime) {
+            return res.status(400).send(`Lịch chiếu phải nằm trong khoảng từ ${open_time} đến ${close_time}`);
+        }
+
+        if (newEnd > closeTime) {
+            return res.status(400).send(`Lịch chiếu phim không vượt quá thời gian đóng cửa`);
+        }
 
         const existingShowtimes = await ShowTime.find({
             room_id,
             showtime: { $lt: newEnd }
         }).populate('movie_id');
 
-        // Lọc ra các lịch trùng bằng cách kiểm tra showtime + duration của từng lịch cũ
         const isOverlapping = existingShowtimes.some(existing => {
             const existingStart = new Date(existing.showtime);
             const existingDuration = existing.movie_id?.duration || 0;
             const existingEnd = new Date(existingStart);
-            existingEnd.setMinutes(existingEnd.getMinutes() + existingDuration);
+            existingEnd.setMinutes(existingEnd.getMinutes() + existingDuration + time_gap);
 
             return newStart < existingEnd && newEnd > existingStart;
         });
 
         if (isOverlapping) {
-            return res.status(400).send("Lịch chiếu bị trùng với lịch chiếu khác trong phòng.");
+            return res.status(400).send("Lịch chiếu bị trùng với lịch chiếu khác trong phòng hoặc không đủ thời gian dọn dẹp.");
         }
 
         const newShowtime = new ShowTime({
@@ -49,6 +78,7 @@ const createShowTime = async (req, res) => {
         return res.status(500).send("Lỗi Server");
     }
 };
+
 
 const getAllShowTimes = async (req, res) => {
     try {
@@ -217,16 +247,77 @@ const deleteShowTimeById = async (req, res) => {
 
 const updateShowTimeById = async (req, res) => {
     try {
-        const showtime = await ShowTime.findByIdAndUpdate(
+        const { movie_id, showtime, price, room_id } = req.body;
+
+        const setting = await Setting.findOne();
+        if (!setting) {
+            return res.status(500).send("Không tìm thấy cài đặt hệ thống.");
+        }
+
+        const { min_ticket_price, max_ticket_price, time_gap, open_time, close_time } = setting;
+
+        if (price < min_ticket_price || price > max_ticket_price) {
+            return res.status(400).send(`Giá vé phải nằm trong khoảng từ ${min_ticket_price} đến ${max_ticket_price}.`);
+        }
+
+        const movie = await Movie.findById(movie_id);
+        if (!movie) {
+            return res.status(404).send("Movie không tồn tại.");
+        }
+
+        const duration = movie.duration;
+        const newStart = new Date(showtime);
+        const newEnd = new Date(newStart);
+        newEnd.setMinutes(newEnd.getMinutes() + duration);
+
+        const openTime = parseTimeToDate(newStart, open_time);
+        let closeTime = parseTimeToDate(newStart, close_time);
+
+        if (closeTime <= openTime) {
+            closeTime.setDate(closeTime.getDate() + 1);
+        }
+
+        if (newStart < openTime || newEnd > closeTime) {
+            return res.status(400).send(`Lịch chiếu phải nằm trong khoảng từ ${open_time} đến ${close_time}`);
+        }
+
+        // Loại trừ chính lịch chiếu đang cập nhật
+        const existingShowtimes = await ShowTime.find({
+            _id: { $ne: req.params.id },
+            room_id,
+            showtime: { $lt: newEnd }
+        }).populate('movie_id');
+
+        const isOverlapping = existingShowtimes.some(existing => {
+            const existingStart = new Date(existing.showtime);
+            const existingDuration = existing.movie_id?.duration || 0;
+            const existingEnd = new Date(existingStart);
+            existingEnd.setMinutes(existingEnd.getMinutes() + existingDuration + time_gap);
+
+            return newStart < existingEnd && newEnd > existingStart;
+        });
+
+        if (isOverlapping) {
+            return res.status(400).send("Lịch chiếu bị trùng với lịch khác hoặc không đủ thời gian dọn dẹp.");
+        }
+
+        const updatedShowtime = await ShowTime.findByIdAndUpdate(
             req.params.id,
-            req.body,
+            {
+                showtime: newStart,
+                price,
+                movie_id,
+                room_id
+            },
             { new: true }
         );
-        if (!showtime) {
-            console.log("Lịch chiếu phim không tồn tại!");
+
+        if (!updatedShowtime) {
             return res.status(404).send("Lịch chiếu phim không tồn tại");
         }
-        return res.status(200).send(showtime);
+
+        return res.status(200).send(updatedShowtime);
+
     } catch (error) {
         console.log("Lỗi server: ", error);
         return res.status(500).send("Lỗi Server");
