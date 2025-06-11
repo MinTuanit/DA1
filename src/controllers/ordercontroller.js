@@ -45,7 +45,7 @@ const createOrder = async (req, res) => {
         return res.status(201).json(newOrder);
     } catch (error) {
         console.error("Lỗi tạo đơn hàng:", error);
-        return res.status(500).json({ message: "Lỗi server!" });
+        return res.status(500).json({ error: { message: "Lỗi Server" } });
     }
 };
 
@@ -58,22 +58,19 @@ const createOrders = async (req, res) => {
             total_price, user_id, products, tickets,
             status, email, amount, payment_method, discount_id
         } = req.body;
+
         const ordercode = await generateUniqueOrderCode();
 
-        // Kiểm tra ghế đã được đặt chưa
         if (tickets && tickets.seats.length > 0) {
             const existingTicket = await Ticket.find({
                 showtime_id: tickets.showtime_id,
                 seat_id: { $in: tickets.seats.map(seat => seat.seat_id) }
             });
             if (existingTicket.length > 0) {
-                return res.status(409).json({
-                    message: 'Lỗi khi tạo hóa đơn! Ghế đã được đặt chỗ.',
-                });
+                return res.status(409).json({ error: { message: 'Ghế đã được đặt chỗ.' } });
             }
         }
 
-        // Tạo Order
         const order = new Order({
             ordercode,
             total_price,
@@ -83,8 +80,7 @@ const createOrders = async (req, res) => {
         });
         await order.save({ session });
 
-        // Thêm sản phẩm
-        if (products && products.length > 0) {
+        if (products?.length > 0) {
             const orderProducts = products.map(p => ({
                 order_id: order._id,
                 product_id: p.product_id,
@@ -93,8 +89,7 @@ const createOrders = async (req, res) => {
             await OrderProductDetail.insertMany(orderProducts, { session });
         }
 
-        // Thêm vé
-        if (tickets && tickets.seats.length > 0) {
+        if (tickets?.seats.length > 0) {
             const ticketDocs = tickets.seats.map(s => ({
                 order_id: order._id,
                 showtime_id: tickets.showtime_id,
@@ -103,7 +98,6 @@ const createOrders = async (req, res) => {
             await Ticket.insertMany(ticketDocs, { session });
         }
 
-        // Thanh toán
         if (amount && payment_method) {
             const payment = new Payment({
                 order_id: order._id,
@@ -114,7 +108,6 @@ const createOrders = async (req, res) => {
             });
             await payment.save({ session });
 
-            // Giảm số lượng mã giảm giá
             if (discount_id) {
                 await Discount.findByIdAndUpdate(
                     discount_id,
@@ -126,7 +119,6 @@ const createOrders = async (req, res) => {
 
         await session.commitTransaction();
 
-        // Populate vé và sản phẩm sau khi commit
         const [populatedTickets, populatedProducts] = await Promise.all([
             Ticket.find({ order_id: order._id })
                 .populate({ path: 'seat_id', select: 'seat_name seat_column' })
@@ -146,7 +138,6 @@ const createOrders = async (req, res) => {
                 .populate({ path: 'product_id', select: 'name' })
         ]);
 
-        // Gửi email xác nhận
         if (email) {
             try {
                 const showtime = populatedTickets[0]?.showtime_id;
@@ -175,7 +166,6 @@ const createOrders = async (req, res) => {
             }
         }
 
-        // === TẠO FILE PDF ===
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `inline; filename=hoadon_${ordercode}.pdf`);
 
@@ -223,16 +213,12 @@ const createOrders = async (req, res) => {
         if (session.inTransaction()) {
             await session.abortTransaction();
         }
-        console.error(error);
-        return res.status(500).json({
-            message: 'Lỗi khi tạo hóa đơn',
-            error: error.message
-        });
+        console.error("Lỗi khi tạo hóa đơn:", error);
+        return res.status(500).json({ error: { message: "Lỗi khi tạo hóa đơn" } });
     } finally {
         session.endSession();
     }
 };
-
 
 const getTicketAndProductByOrderId = async (req, res) => {
     try {
@@ -242,17 +228,13 @@ const getTicketAndProductByOrderId = async (req, res) => {
             Ticket.countDocuments({ order_id }),
             Product.countDocuments({ order_id })
         ]);
-        return res.json({
-            order_id,
-            ticketCount,
-            productCount
-        });
 
+        return res.json({ order_id, ticketCount, productCount });
     } catch (error) {
         console.error("Lỗi khi lấy thông tin hóa đơn:", error);
-        return res.status(500).json({ message: "Lỗi server!" });
+        return res.status(500).json({ error: { message: "Lỗi Server" } });
     }
-}
+};
 
 const getAllOrders = async (req, res) => {
     try {
@@ -262,20 +244,10 @@ const getAllOrders = async (req, res) => {
             orders.map(async (order) => {
                 const [tickets, orderProducts] = await Promise.all([
                     Ticket.find({ order_id: order._id })
-                        .populate({
-                            path: 'showtime_id',
-                            populate: {
-                                path: 'movie_id',
-                                model: 'Movies'
-                            }
-                        })
+                        .populate({ path: 'showtime_id', populate: { path: 'movie_id', model: 'Movies' } })
                         .populate('seat_id'),
-
                     OrderProductDetail.find({ order_id: order._id })
-                        .populate({
-                            path: 'product_id',
-                            model: 'Products'
-                        })
+                        .populate({ path: 'product_id', model: 'Products' })
                 ]);
 
                 const ticketDetails = tickets.map(ticket => ({
@@ -290,27 +262,24 @@ const getAllOrders = async (req, res) => {
                     ]
                 }));
 
-                const productDetails = orderProducts.map(product => {
-                    return {
-                        product_id: product.product_id?._id || null,
-                        name: product.product_id?.name || '',
-                        price: product.product_id?.price || '',
-                        quantity: product.quantity,
-                        total: product.product_id?.price * product.quantity || 0
-                    };
-                });
+                const productDetails = orderProducts.map(product => ({
+                    product_id: product.product_id?._id || null,
+                    name: product.product_id?.name || '',
+                    price: product.product_id?.price || '',
+                    quantity: product.quantity,
+                    total: product.product_id?.price * product.quantity || 0
+                }));
 
                 return {
                     ...order.toObject(),
                     ticketCount: tickets.length,
                     productCount: orderProducts.length,
                     tickets: ticketDetails.length > 0 ? {
-                        title: ticketDetails[0].title || '',
-                        showtime: ticketDetails[0].showtime || '',
-                        price: ticketDetails[0].price || 0,
+                        title: ticketDetails[0].title,
+                        showtime: ticketDetails[0].showtime,
+                        price: ticketDetails[0].price,
                         seats: ticketDetails.flatMap(t => t.seats || []),
                     } : null,
-
                     products: productDetails
                 };
             })
@@ -319,10 +288,9 @@ const getAllOrders = async (req, res) => {
         return res.status(200).json(ordersWithDetails);
     } catch (error) {
         console.error("Lỗi khi lấy danh sách hóa đơn:", error);
-        return res.status(500).json({ message: "Lỗi server!" });
+        return res.status(500).json({ error: { message: "Lỗi Server" } });
     }
 };
-
 
 const getOrderById = async (req, res) => {
     try {
@@ -330,25 +298,15 @@ const getOrderById = async (req, res) => {
 
         const order = await Order.findById(orderId);
         if (!order) {
-            return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
+            return res.status(404).json({ error: { message: 'Không tìm thấy đơn hàng' } });
         }
 
         const [tickets, orderProducts] = await Promise.all([
             Ticket.find({ order_id: order._id })
-                .populate({
-                    path: 'showtime_id',
-                    populate: {
-                        path: 'movie_id',
-                        model: 'Movies'
-                    }
-                })
+                .populate({ path: 'showtime_id', populate: { path: 'movie_id', model: 'Movies' } })
                 .populate('seat_id'),
-
             OrderProductDetail.find({ order_id: order._id })
-                .populate({
-                    path: 'product_id',
-                    model: 'Products'
-                })
+                .populate({ path: 'product_id', model: 'Products' })
         ]);
 
         const ticketDetails = tickets.map(ticket => ({
@@ -380,7 +338,7 @@ const getOrderById = async (req, res) => {
         return res.status(200).json(orderDetail);
     } catch (error) {
         console.error("Lỗi khi lấy chi tiết hóa đơn:", error);
-        return res.status(500).json({ message: "Lỗi server!" });
+        return res.status(500).json({ error: { message: "Lỗi Server" } });
     }
 };
 
@@ -389,10 +347,10 @@ const getOrderByCode = async (req, res) => {
         const { ordercode } = req.params;
         const order = await Order.findOne({ ordercode });
         if (!order) {
-            return res.status(404).json({ message: "Hóa đơn không tồn tại" });
+            return res.status(404).json({ error: { message: "Hóa đơn không tồn tại" } });
         }
 
-        const [populatedTickets, populatedProducts] = await Promise.all([
+        const [tickets, products] = await Promise.all([
             Ticket.find({ order_id: order._id })
                 .populate({ path: 'seat_id', select: 'seat_name seat_column' })
                 .populate({
@@ -410,15 +368,14 @@ const getOrderByCode = async (req, res) => {
                 .populate({ path: 'product_id', select: 'name' })
         ]);
 
+        // PDF header
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `inline; filename=hoadon_${ordercode}.pdf`);
-
         const doc = new PDFDocument();
         doc.pipe(res);
 
         const fontPath = path.join(__dirname, '../assets/fonts/Roboto-Regular.ttf');
         doc.font(fontPath);
-
         doc.fontSize(20).text('HÓA ĐƠN ĐẶT VÉ', { align: 'center' });
         doc.moveDown();
         doc.fontSize(12).text(`Mã hóa đơn: ${ordercode}`);
@@ -426,37 +383,34 @@ const getOrderByCode = async (req, res) => {
         doc.text(`Tổng tiền: ${order.total_price} VND`);
         doc.moveDown();
 
-        if (populatedTickets.length > 0) {
-            const cinemaName = populatedTickets[0]?.showtime_id?.room_id?.cinema_id?.name;
-            const address = populatedTickets[0]?.showtime_id?.room_id?.cinema_id?.address;
-            const room = populatedTickets[0]?.showtime_id?.room_id?.name;
-            const time = populatedTickets[0]?.showtime_id?.showtime;
-            const movie = populatedTickets[0]?.showtime_id?.movie_id?.title;
+        // Tickets info
+        if (tickets.length > 0) {
+            const showtime = tickets[0].showtime_id;
+            const room = showtime?.room_id;
+            const cinema = room?.cinema_id;
 
             doc.fontSize(14).text('Vé xem phim:', { underline: true });
-            doc.fontSize(13).text(`Rạp chiếu phim: ${cinemaName}`);
-            doc.fontSize(12).text(`Địa chỉ: ${address}`);
-            doc.moveDown(0.5);
-            doc.fontSize(12).text(`Phim: ${movie || ''}`);
-            doc.text(`Phòng: ${room}`);
-            doc.text(`Suất chiếu: ${formatDate(time)}`);
-            populatedTickets.forEach((t) => {
-                doc.text(`   Ghế: ${t.seat_id?.seat_name}`);
-            });
+            doc.fontSize(13).text(`Rạp chiếu phim: ${cinema?.name}`);
+            doc.fontSize(12).text(`Địa chỉ: ${cinema?.address}`);
+            doc.text(`Phim: ${showtime?.movie_id?.title}`);
+            doc.text(`Phòng: ${room?.name}`);
+            doc.text(`Suất chiếu: ${formatDate(showtime?.showtime)}`);
+            tickets.forEach(t => doc.text(`   Ghế: ${t.seat_id?.seat_name}`));
         }
 
-        if (populatedProducts.length > 0) {
+        // Product info
+        if (products.length > 0) {
             doc.moveDown();
             doc.fontSize(14).text('Sản phẩm:', { underline: true });
-            populatedProducts.forEach((p, idx) => {
-                doc.fontSize(12).text(`- ${idx + 1}. ${p.product_id?.name} x${p.quantity}`);
+            products.forEach((p, i) => {
+                doc.fontSize(12).text(`- ${i + 1}. ${p.product_id?.name} x${p.quantity}`);
             });
         }
 
         doc.end();
     } catch (error) {
         console.error("Lỗi server: ", error);
-        return res.status(500).json({ message: "Lỗi server" });
+        return res.status(500).json({ error: { message: "Lỗi server" } });
     }
 };
 
@@ -467,35 +421,41 @@ const getOrderWithInfoById = async (req, res) => {
         const order = await Order.findById(id)
             .populate('user_id', 'full_name phone')
             .lean();
+
         if (!order) {
-            return res.status(404).json({ message: 'Order not found' });
+            return res.status(404).json({ error: { message: 'Hóa đơn không tồn tại' } });
         }
 
-        const orderProducts = await OrderProductDetail.find({ order_id: id })
-            .populate('product_id', 'name price category')
-            .lean();
+        const [orderProducts, tickets] = await Promise.all([
+            OrderProductDetail.find({ order_id: id })
+                .populate('product_id', 'name price category')
+                .lean(),
+            Ticket.find({ order_id: id })
+                .populate([
+                    {
+                        path: 'showtime_id',
+                        select: 'start_time movie_id',
+                        populate: { path: 'movie_id', select: 'title' }
+                    },
+                    { path: 'seat_id', select: 'seat_name seat_column' }
+                ])
+                .lean()
+        ]);
 
-        const products = orderProducts.map(op => ({
-            product_id: op.product_id._id,
-            name: op.product_id.name,
-            price: op.product_id.price,
-            category: op.product_id.category,
-            quantity: op.quantity
+        const products = orderProducts.map(p => ({
+            product_id: p.product_id._id,
+            name: p.product_id.name,
+            price: p.product_id.price,
+            category: p.product_id.category,
+            quantity: p.quantity
         }));
-
-        const tickets = await Ticket.find({ order_id: id })
-            .populate([
-                { path: 'showtime_id', select: 'start_time movie_id', populate: { path: 'movie_id', select: 'title' } },
-                { path: 'seat_id', select: 'seat_name seat_column' }
-            ])
-            .lean();
 
         const ticketDetails = tickets.map(t => ({
             ticket_id: t._id,
             showtime: {
                 showtime_id: t.showtime_id._id,
                 start_time: t.showtime_id.start_time,
-                movie_title: t.showtime_id.movie_id.title,
+                movie_title: t.showtime_id.movie_id.title
             },
             seat: {
                 seat_id: t.seat_id._id,
@@ -521,10 +481,10 @@ const getOrderWithInfoById = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Lỗi khi lấy hóa đơn', error: error.message });
+        console.error("Lỗi khi lấy hóa đơn:", error);
+        return res.status(500).json({ error: { message: "Lỗi khi lấy hóa đơn" } });
     }
-}
+};
 
 const getOrderByUserId = async (req, res) => {
     try {
@@ -532,7 +492,7 @@ const getOrderByUserId = async (req, res) => {
 
         const orders = await Order.find({ user_id: userId });
         if (!orders || orders.length === 0) {
-            return res.status(404).json({ message: "Không có hóa đơn của người dùng này" });
+            return res.status(404).json({ error: { message: "Hóa đơn không tồn tại" } });
         }
 
         const detailedOrders = await Promise.all(
@@ -586,7 +546,7 @@ const getOrderByUserId = async (req, res) => {
         return res.status(200).json(detailedOrders);
     } catch (error) {
         console.error("Lỗi khi lấy hóa đơn theo user_id:", error);
-        return res.status(500).json({ message: "Lỗi server!" });
+        return res.status(500).json({ error: { message: "Lỗi server" } });
     }
 };
 
@@ -601,7 +561,7 @@ const getOrderWithUserInfo = async (req, res) => {
             });
 
         if (!order) {
-            return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+            return res.status(404).json({ error: { message: "Hóa đơn không tồn tại" } });
         }
 
         const formattedOrder = {
@@ -622,7 +582,7 @@ const getOrderWithUserInfo = async (req, res) => {
         return res.json(formattedOrder);
     } catch (err) {
         console.error(err);
-        return res.status(500).json({ message: "Lỗi server" });
+        return res.status(500).json({ error: { message: "Lỗi server" } });
     }
 };
 
@@ -631,12 +591,12 @@ const deleteOrderById = async (req, res) => {
         const order = await Order.findByIdAndDelete(req.params.id);
         if (!order) {
             console.log("Hóa đơn không tồn tại!");
-            return res.status(404).send("Hóa đơn không tồn tại");
+            return res.status(404).json({ error: { message: "Hóa đơn không tồn tại" } });
         }
-        else return res.status(204).send("Xóa hóa đơn thành công");
+        else return res.status(204).json("Xóa hóa đơn thành công");
     } catch (error) {
         console.log("Lỗi server: ", error);
-        return res.status(500).send("Lỗi Server");
+        return res.status(500).json({ error: { message: "Lỗi server" } });
     }
 };
 
@@ -645,13 +605,13 @@ const deleteOrderByUserId = async (req, res) => {
         const result = await Order.deleteMany({ user_id: req.params.userid });
         if (result.deletedCount === 0) {
             console.log("Không có hóa đơn nào được tìm thấy để xóa!");
-            return res.status(404).send("Không có hóa đơn nào được tìm thấy để xóa");
+            return res.status(404).json({ error: { message: "Không có hóa đơn nào được tìm thấy để xóa!" } });
         }
         console.log(`${result.deletedCount} hóa đơn đã được xóa.`);
         return res.status(200).send(`${result.deletedCount} hóa đơn đã được xóa.`);
     } catch (error) {
         console.log("Lỗi server: ", error);
-        return res.status(500).send("Lỗi Server");
+        return res.status(500).json({ error: { message: "Lỗi server" } });
     }
 };
 
@@ -666,14 +626,15 @@ const updateOrderById = async (req, res) => {
         if (!existingOrder) {
             await session.abortTransaction();
             session.endSession();
-            return res.status(404).json({ message: "Hóa đơn không tồn tại" });
+            return res.status(404).json({ error: { message: "Hóa đơn không tồn tại" } });
         }
 
         if (existingOrder.status !== "pending") {
             await session.abortTransaction();
             session.endSession();
             return res.status(400).json({
-                message: `Không thể cập nhật đơn hàng với trạng thái "${existingOrder.status}"`
+                error:
+                    { message: `Không thể cập nhật đơn hàng với trạng thái "${existingOrder.status}"` }
             });
         }
 
@@ -756,7 +717,7 @@ const updateOrderById = async (req, res) => {
         await session.abortTransaction();
         session.endSession();
         console.error(error);
-        return res.status(500).json({ message: "Lỗi Server", error: error.message });
+        return res.status(500).json({ error: { message: "Lỗi server" } });
     }
 };
 

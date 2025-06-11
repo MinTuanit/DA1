@@ -7,6 +7,7 @@ var bodyParser = require("body-parser");
 const passport = require("./src/config/passport");
 const app = express();
 const routes = require("./src/routes");
+const errorHandler = require("./src/middlewares/errorHandler");
 
 dotenv.config();
 
@@ -28,9 +29,10 @@ app.use(morgan("common")); // Log HTTP requests
 // Initialize Passport middleware
 app.use(passport.initialize());
 
+
 // Define routes
 app.use("/v1", routes);
-
+app.use(errorHandler);
 // Protected route
 app.get('/protected', passport.authenticate('jwt', { session: false }), (req, res) => {
   res.send('You have accessed a protected route!');

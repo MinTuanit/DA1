@@ -11,17 +11,11 @@ const Discount = require('../models/discount');
 const getAll = async (req, res) => {
     try {
         const payments = await Payment.find();
-        let total_revenue = 0;
-        payments.forEach(p => {
-            total_revenue += p.amount;
-        });
-        const t = {
-            total_revenue: total_revenue
-        }
-        return res.status(200).send(t);
+        const total_revenue = payments.reduce((sum, p) => sum + p.amount, 0);
+        return res.status(200).json({ total_revenue });
     } catch (error) {
-        console.log("Lỗi server! ", error);
-        return res.status(500).send("Lỗi Server");
+        console.error("Lỗi server:", error);
+        return res.status(500).json({ error: { message: "Lỗi Server" } });
     }
 };
 
@@ -33,74 +27,41 @@ const getAllRevenueReport = async (req, res) => {
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
 
-        // Validate ngày
         if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-            return res.status(400).json({ error: "Invalid startDate or endDate" });
+            return res.status(400).json({ error: { message: "Ngày không hợp lệ" } });
         }
 
-        // --- Vé ---
         const tickets = await Ticket.find()
-            .populate({
-                path: 'order_id',
-                match: { ordered_at: { $gte: start, $lte: end } }
-            })
-            .populate({
-                path: 'showtime_id',
-                populate: {
-                    path: 'movie_id'
-                }
-            });
+            .populate({ path: 'order_id', match: { ordered_at: { $gte: start, $lte: end } } })
+            .populate({ path: 'showtime_id', populate: { path: 'movie_id' } });
 
         const validTickets = tickets.filter(t => t.order_id && t.showtime_id);
-        let movieSales = {};
+
+        const movieSales = {};
         validTickets.forEach(ticket => {
             const movie = ticket.showtime_id.movie_id;
-            if (!movie || !movie.title) return;
-
-            const movieName = movie.title;
-            if (!movieSales[movieName]) {
-                movieSales[movieName] = 0;
-            }
-            movieSales[movieName] += 1;
+            if (!movie?.title) return;
+            movieSales[movie.title] = (movieSales[movie.title] || 0) + 1;
         });
 
-        let ticketRevenue = 0;
-        validTickets.forEach(ticket => {
-            ticketRevenue += ticket.showtime_id.price;
-        });
-
+        const ticketRevenue = validTickets.reduce((sum, t) => sum + t.showtime_id.price, 0);
         const ticketCount = validTickets.length;
 
-        // --- Thanh toán ---
-        const payments = await Payment.find({
-            paid_at: { $gte: start, $lte: end }
-        });
-
+        const payments = await Payment.find({ paid_at: { $gte: start, $lte: end } });
         const totalRevenue = payments.reduce((sum, p) => sum + p.amount, 0);
         const productRevenue = totalRevenue - ticketRevenue;
 
-        // --- Sản phẩm đồ ăn ---
         const orderProductDetails = await OrderProductDetail.find()
-            .populate({
-                path: 'order_id',
-                match: { ordered_at: { $gte: start, $lte: end } }
-            })
+            .populate({ path: 'order_id', match: { ordered_at: { $gte: start, $lte: end } } })
             .populate('product_id');
 
         const validOrderProducts = orderProductDetails.filter(opd => opd.order_id && opd.product_id);
 
-        const totalProductQuantity = validOrderProducts.reduce((sum, item) => sum + item.quantity, 0);
-
-        // Nhóm theo tên sản phẩm
         const productSales = {};
-
-        validOrderProducts.forEach(item => {
-            const name = item.product_id.name;
-            if (!productSales[name]) {
-                productSales[name] = 0;
-            }
-            productSales[name] += item.quantity;
-        });
+        const totalProductQuantity = validOrderProducts.reduce((sum, item) => {
+            productSales[item.product_id.name] = (productSales[item.product_id.name] || 0) + item.quantity;
+            return sum + item.quantity;
+        }, 0);
 
         return res.status(200).json({
             ticketRevenue,
@@ -111,13 +72,11 @@ const getAllRevenueReport = async (req, res) => {
             productSales,
             movieSales
         });
-    } catch (err) {
-        console.error("Lỗi khi thống kê doanh thu:", err);
-        res.sendStatus(500);
+    } catch (error) {
+        console.error("Lỗi khi thống kê doanh thu:", error);
+        return res.status(500).json({ error: { message: "Lỗi Server" } });
     }
 };
-
-
 
 const getRevenueReport = async (req, res) => {
     try {
@@ -128,218 +87,166 @@ const getRevenueReport = async (req, res) => {
         end.setHours(23, 59, 59, 999);
 
         if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-            return res.status(400).json({ error: "Invalid startDate or endDate" });
+            return res.status(400).json({ error: { message: "Ngày không hợp lệ" } });
         }
 
-        // --- Kiểm tra movie_id ---
-        if (movie_id) {
-            if (!mongoose.Types.ObjectId.isValid(movie_id)) {
-                return res.status(400).json({ error: "Invalid movie_id format" });
-            }
-            const movieExists = await Movie.exists({ _id: movie_id });
-            if (!movieExists) {
-                return res.status(404).json({ error: "Phim không tồn tại" });
-            }
+        if (movie_id && (!mongoose.Types.ObjectId.isValid(movie_id) || !(await Movie.exists({ _id: movie_id })))) {
+            return res.status(404).json({ error: { message: "Phim không tồn tại hoặc ID không hợp lệ" } });
         }
 
-        // --- Kiểm tra product_id ---
-        if (product_id) {
-            if (!mongoose.Types.ObjectId.isValid(product_id)) {
-                return res.status(400).json({ error: "Invalid product_id format" });
-            }
-            const productExists = await Product.exists({ _id: product_id });
-            if (!productExists) {
-                return res.status(404).json({ error: "Sản phẩm không tồn tại" });
-            }
+        if (product_id && (!mongoose.Types.ObjectId.isValid(product_id) || !(await Product.exists({ _id: product_id })))) {
+            return res.status(404).json({ error: { message: "Sản phẩm không tồn tại hoặc ID không hợp lệ" } });
         }
 
-        // --- Vé ---
-        let tickets = await Ticket.find()
-            .populate({
-                path: 'order_id',
-                match: { ordered_at: { $gte: start, $lte: end } }
-            })
-            .populate({
-                path: 'showtime_id',
-                populate: { path: 'movie_id' }
-            });
+        const tickets = await Ticket.find()
+            .populate({ path: 'order_id', match: { ordered_at: { $gte: start, $lte: end } } })
+            .populate({ path: 'showtime_id', populate: { path: 'movie_id' } });
 
         const validTickets = tickets.filter(t => t.order_id && t.showtime_id);
-
-        // Lọc vé theo movie_id nếu có
         const filteredTickets = movie_id
-            ? validTickets.filter(t => t.showtime_id.movie_id && t.showtime_id.movie_id._id.toString() === movie_id)
+            ? validTickets.filter(t => t.showtime_id.movie_id?._id.toString() === movie_id)
             : validTickets;
 
-        let ticketRevenue = 0;
-        filteredTickets.forEach(ticket => {
-            ticketRevenue += ticket.showtime_id.price;
-        });
+        const ticketRevenue = filteredTickets.reduce((sum, t) => sum + t.showtime_id.price, 0);
         const ticketCount = filteredTickets.length;
 
-        // --- Sản phẩm đồ ăn ---
-        let orderProductDetails = await OrderProductDetail.find()
-            .populate({
-                path: 'order_id',
-                match: { ordered_at: { $gte: start, $lte: end } }
-            })
+        const orderProductDetails = await OrderProductDetail.find()
+            .populate({ path: 'order_id', match: { ordered_at: { $gte: start, $lte: end } } })
             .populate('product_id');
 
         let validOrderProducts = orderProductDetails.filter(opd => opd.order_id && opd.product_id);
-
-        // Lọc theo product_id nếu có
         if (product_id) {
             validOrderProducts = validOrderProducts.filter(opd => opd.product_id._id.toString() === product_id);
         }
 
         const totalProductQuantity = validOrderProducts.reduce((sum, item) => sum + item.quantity, 0);
-
         const productSales = {};
         validOrderProducts.forEach(item => {
-            const name = item.product_id.name;
-            if (!productSales[name]) {
-                productSales[name] = 0;
-            }
-            productSales[name] += item.quantity;
+            productSales[item.product_id.name] = (productSales[item.product_id.name] || 0) + item.quantity;
         });
 
-        const response = {
-        };
-
+        const response = {};
         if (product_id) {
-            const productName = validOrderProducts[0]?.product_id?.name || 'Unknown';
             response.product = {
-                name: productName,
+                name: validOrderProducts[0]?.product_id?.name || 'Unknown',
                 quantity: totalProductQuantity
             };
         }
 
         if (movie_id) {
-            const movieName = filteredTickets[0]?.showtime_id?.movie_id?.title || 'Unknown';
             response.movie = {
-                name: movieName,
-                ticketCount: ticketCount,
+                name: filteredTickets[0]?.showtime_id?.movie_id?.title || 'Unknown',
+                ticketCount,
                 revenue: ticketRevenue
             };
         }
 
         return res.status(200).json(response);
-
-    } catch (err) {
-        console.error("Lỗi khi thống kê doanh thu:", err);
-        res.sendStatus(500);
+    } catch (error) {
+        console.error("Lỗi khi thống kê doanh thu:", error);
+        return res.status(500).json({ error: { message: "Lỗi Server" } });
     }
 };
 
 const getDailyTicketRevenueByMovie = async (req, res) => {
-    const { movie_id, startDate, endDate } = req.body;
+    try {
+        const { movie_id, startDate, endDate } = req.body;
 
-    if (!movie_id || !startDate || !endDate) {
-        return res.status(400).json({ error: "Thiếu movie_id hoặc khoảng thời gian" });
+        if (!movie_id || !startDate || !endDate) {
+            return res.status(400).json({ error: { message: "Thiếu movie_id hoặc khoảng thời gian" } });
+        }
+
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+
+        const allTickets = await Ticket.find()
+            .populate({ path: 'order_id', match: { ordered_at: { $gte: start, $lte: end } } })
+            .populate({ path: 'showtime_id', populate: { path: 'movie_id' } });
+
+        const validTickets = allTickets.filter(t =>
+            t.order_id && t.showtime_id?.movie_id?._id.toString() === movie_id
+        );
+
+        const dayResults = [];
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            const dayStart = new Date(d.setHours(0, 0, 0, 0));
+            const dayEnd = new Date(d.setHours(23, 59, 59, 999));
+
+            const dayTickets = validTickets.filter(t => {
+                const orderedAt = new Date(t.order_id.ordered_at);
+                return orderedAt >= dayStart && orderedAt <= dayEnd;
+            });
+
+            const ticketRevenue = dayTickets.reduce((sum, t) => sum + t.showtime_id.price, 0);
+            const ticketCount = dayTickets.length;
+
+            dayResults.push({
+                date: dayStart.toLocaleDateString('en-CA'),
+                ticketRevenue,
+                ticketCount
+            });
+        }
+
+        return res.status(200).json(dayResults);
+    } catch (error) {
+        console.error("Lỗi server:", error);
+        return res.status(500).json({ error: { message: "Lỗi Server" } });
     }
-
-    const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
-    const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
-    const start = new Date(startYear, startMonth - 1, startDay, 0, 0, 0, 0);
-    const end = new Date(endYear, endMonth - 1, endDay, 23, 59, 59, 999);
-
-    const allTickets = await Ticket.find()
-        .populate({
-            path: 'order_id',
-            match: { ordered_at: { $gte: start, $lte: end } }
-        })
-        .populate({
-            path: 'showtime_id',
-            populate: { path: 'movie_id' }
-        });
-
-    const validTickets = allTickets.filter(t =>
-        t.order_id && t.showtime_id && t.showtime_id.movie_id &&
-        t.showtime_id.movie_id._id.toString() === movie_id
-    );
-
-    const dayResults = [];
-
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        const dayStart = new Date(d);
-        const dayEnd = new Date(d);
-        dayStart.setHours(0, 0, 0, 0);
-        dayEnd.setHours(23, 59, 59, 999);
-
-        const dayTickets = validTickets.filter(t => {
-            const orderedAt = new Date(t.order_id.ordered_at);
-            return orderedAt >= dayStart && orderedAt <= dayEnd;
-        });
-
-        const ticketRevenue = dayTickets.reduce((sum, t) => sum + t.showtime_id.price, 0);
-        const ticketCount = dayTickets.length;
-
-        dayResults.push({
-            date: dayStart.toLocaleDateString('en-CA'),
-            ticketRevenue,
-            ticketCount
-        });
-    }
-
-    return res.status(200).json(dayResults);
 };
 
 const getDailyProductSalesByProduct = async (req, res) => {
-    const { product_id, startDate, endDate } = req.body;
+    try {
+        const { product_id, startDate, endDate } = req.body;
 
-    if (!product_id || !startDate || !endDate) {
-        return res.status(400).json({ error: "Thiếu product_id hoặc khoảng thời gian" });
+        if (!product_id || !startDate || !endDate) {
+            return res.status(400).json({ error: { message: "Thiếu product_id hoặc khoảng thời gian" } });
+        }
+
+        const product = await Product.findById(product_id);
+        if (!product) {
+            return res.status(404).json({ error: { message: "Không tìm thấy sản phẩm" } });
+        }
+
+        const price = product.price;
+
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+
+        const allOrderProducts = await OrderProductDetail.find()
+            .populate({ path: 'order_id', match: { ordered_at: { $gte: start, $lte: end } } })
+            .populate('product_id');
+
+        const validOrderProducts = allOrderProducts.filter(opd =>
+            opd.order_id && opd.product_id?._id.toString() === product_id
+        );
+
+        const dayResults = [];
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            const dayStart = new Date(d.setHours(0, 0, 0, 0));
+            const dayEnd = new Date(d.setHours(23, 59, 59, 999));
+
+            const dayProducts = validOrderProducts.filter(opd => {
+                const orderedAt = new Date(opd.order_id.ordered_at);
+                return orderedAt >= dayStart && orderedAt <= dayEnd;
+            });
+
+            const totalProductQuantity = dayProducts.reduce((sum, item) => sum + item.quantity, 0);
+            const productRevenue = totalProductQuantity * price;
+
+            dayResults.push({
+                date: dayStart.toLocaleDateString('en-CA'),
+                totalProductQuantity,
+                productRevenue
+            });
+        }
+
+        return res.status(200).json(dayResults);
+    } catch (error) {
+        console.error("Lỗi server:", error);
+        return res.status(500).json({ error: { message: "Lỗi Server" } });
     }
-
-    const product = await Product.findById(product_id);
-    if (!product) {
-        return res.status(404).json({ error: "Không tìm thấy sản phẩm" });
-    }
-
-    const price = product.price;
-
-    const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
-    const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
-    const start = new Date(startYear, startMonth - 1, startDay, 0, 0, 0, 0);
-    const end = new Date(endYear, endMonth - 1, endDay, 23, 59, 59, 999);
-
-    const allOrderProducts = await OrderProductDetail.find()
-        .populate({
-            path: 'order_id',
-            match: { ordered_at: { $gte: start, $lte: end } }
-        })
-        .populate('product_id');
-
-    const validOrderProducts = allOrderProducts.filter(opd =>
-        opd.order_id &&
-        opd.product_id &&
-        opd.product_id._id.toString() === product_id
-    );
-
-    const dayResults = [];
-
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        const dayStart = new Date(d);
-        const dayEnd = new Date(d);
-        dayStart.setHours(0, 0, 0, 0);
-        dayEnd.setHours(23, 59, 59, 999);
-
-        const dayProducts = validOrderProducts.filter(opd => {
-            const orderedAt = new Date(opd.order_id.ordered_at);
-            return orderedAt >= dayStart && orderedAt <= dayEnd;
-        });
-
-        const totalProductQuantity = dayProducts.reduce((sum, item) => sum + item.quantity, 0);
-        const productRevenue = totalProductQuantity * price;
-
-        dayResults.push({
-            date: dayStart.toLocaleDateString('en-CA'),
-            totalProductQuantity,
-            productRevenue
-        });
-    }
-
-    return res.status(200).json(dayResults);
 };
 
 module.exports = {

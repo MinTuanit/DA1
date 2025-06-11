@@ -30,6 +30,7 @@ const chatbot = async (req, res) => {
         const userMessage = req.body.message;
         const prompt = await buildPrompt();
         console.log('Prompt content:\n', prompt);
+
         const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
             model: 'anthropic/claude-3-haiku:beta',
             messages: [
@@ -48,10 +49,22 @@ const chatbot = async (req, res) => {
         return res.json({ reply });
 
     } catch (err) {
-        console.error(err.response?.data || err.message);
-        return res.status(500).json({ error: 'Lỗi xử lý yêu cầu AI' });
+        console.error('Lỗi AI:', err.response?.data || err.message);
+
+        const message =
+            err.response?.data?.error?.message ||
+            err.response?.data?.message ||
+            err.message ||
+            'Lỗi xử lý yêu cầu AI';
+
+        return res.status(500).json({
+            error: {
+                message
+            }
+        });
     }
 };
+
 
 module.exports = {
     chatbot
