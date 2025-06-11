@@ -247,8 +247,9 @@ const deleteShowTimeById = async (req, res) => {
 
 const updateShowTimeById = async (req, res) => {
     try {
-        const { movie_id, showtime, price, room_id } = req.body;
-
+        const { showtime, price, room_id } = req.body;
+        const movie_id = req.body.movie.movie_id;
+        console.log(req.body);
         const setting = await Setting.findOne();
         if (!setting) {
             return res.status(500).send("Không tìm thấy cài đặt hệ thống.");
