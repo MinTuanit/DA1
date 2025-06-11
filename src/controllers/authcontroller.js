@@ -13,51 +13,65 @@ const register = async (req, res) => {
     try {
         const user = await usercontroller.createUser(req, res);
     } catch (error) {
-        return res.status(400).json({ message: error.message });
+        console.error("Lỗi server:", error);
+        return res.status(500).json({
+            error: { message: "Lỗi Server: " + error.message }
+        });
     }
 };
 
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
-        const user = await User.findOne({ email: email });
         if (!email || !password) {
-            return res.status(400).json({ message: "Email và mật khẩu là bắt buộc!" });
+            return res.status(400).json({
+                error: { message: "Email và mật khẩu là bắt buộc!" }
+            });
         }
 
+        const user = await User.findOne({ email: email });
         if (!user || !(await bcrypt.compare(password, user.password))) {
-            return res.status(401).json({ message: "Email hoặc mật khẩu không đúng!" });
+            return res.status(401).json({
+                error: { message: "Email hoặc mật khẩu không đúng!" }
+            });
         }
 
         const accessToken = tokenservice.generateAccessToken(user);
         const refreshToken = tokenservice.generateRefreshToken(user);
 
-        return res.json({ accessToken, refreshToken, user_id: user._id });
+        return res.status(200).json({ accessToken, refreshToken, user_id: user._id });
     } catch (error) {
         console.error("Lỗi server:", error);
-        return res.status(500).json({ message: "Lỗi server!" });
+        return res.status(500).json({
+            error: { message: "Lỗi Server: " + error.message }
+        });
     }
 };
 
-const blacklist = new Set(); // Tạm lưu danh sách token bị vô hiệu hóa
+const blacklist = new Set();
 
 const logout = (req, res) => {
     try {
         const { refreshToken } = req.body;
         if (!refreshToken) {
-            return res.status(400).json({ message: "Thiếu refresh token!" });
+            return res.status(400).json({
+                error: { message: "Thiếu refresh token!" }
+            });
         }
 
-        // Kiểm tra nếu token đã bị vô hiệu hóa trước đó
         if (blacklist.has(refreshToken)) {
-            return res.status(400).json({ message: "Token đã bị vô hiệu hóa!" });
+            return res.status(400).json({
+                error: { message: "Token đã bị vô hiệu hóa!" }
+            });
         }
 
-        // Thêm token vào blacklist
         blacklist.add(refreshToken);
         return res.status(200).json({ message: "Đăng xuất thành công!" });
     } catch (error) {
-        return res.status(500).json({ message: "Lỗi server!", error: error.message });
+        console.error("Lỗi server:", error);
+        return res.status(500).json({
+            error: { message: "Lỗi Server: " + error.message }
+        });
     }
 };
 
@@ -66,17 +80,24 @@ const refreshtoken = async (req, res) => {
         const { refreshToken } = req.body;
 
         if (!refreshToken) {
-            return res.status(400).json({ message: "Không có refresh token!" });
+            return res.status(400).json({
+                error: { message: "Không có refresh token!" }
+            });
         }
 
         const newAccessToken = tokenservice.refreshAccessToken(refreshToken);
         if (!newAccessToken) {
-            return res.status(403).json({ message: "Refresh token không hợp lệ hoặc đã hết hạn!" });
+            return res.status(403).json({
+                error: { message: "Refresh token không hợp lệ hoặc đã hết hạn!" }
+            });
         }
+
         return res.status(200).json({ accessToken: newAccessToken });
     } catch (error) {
         console.error("Lỗi server:", error);
-        return res.status(500).json({ message: "Lỗi server!" });
+        return res.status(500).json({
+            error: { message: "Lỗi Server: " + error.message }
+        });
     }
 };
 
@@ -92,16 +113,20 @@ const forgotPassword = async (req, res) => {
     try {
         const { email } = req.body;
         const user = await User.findOne({ email });
-        if (!user) return res.status(404).send("Không tìm thấy người dùng");
+        if (!user) {
+            return res.status(404).json({
+                error: { message: "Không tìm thấy người dùng" }
+            });
+        }
 
         const token = crypto.randomBytes(32).toString("hex");
-        const expireTime = Date.now() + 15 * 60 * 1000; // 15 phút
+        const expireTime = Date.now() + 15 * 60 * 1000;
 
         user.resetPasswordToken = token;
         user.resetPasswordExpires = expireTime;
         await user.save();
 
-        const resetLink = `http://localhost:3000/reset-password?token=${token}`; // link fe reset password
+        const resetLink = `http://localhost:3000/reset-password?token=${token}`;
 
         await transporter.sendMail({
             from: `"Rạp Chiếu Phim" <${process.env.MAIL_USERNAME}>`,
@@ -110,10 +135,12 @@ const forgotPassword = async (req, res) => {
             html: `<p>Click vào link sau để đặt lại mật khẩu:</p><a href="${resetLink}">${resetLink}</a>`,
         });
 
-        return res.send("Đã gửi email đặt lại mật khẩu");
+        return res.status(200).json({ message: "Đã gửi email đặt lại mật khẩu" });
     } catch (error) {
-        console.error(error);
-        res.status(500).send("Lỗi server");
+        console.error("Lỗi server:", error);
+        return res.status(500).json({
+            error: { message: "Lỗi Server: " + error.message }
+        });
     }
 };
 
@@ -125,17 +152,23 @@ const resetPassword = async (req, res) => {
             resetPasswordExpires: { $gt: Date.now() },
         });
 
-        if (!user) return res.status(400).send("Token không hợp lệ hoặc đã hết hạn");
+        if (!user) {
+            return res.status(400).json({
+                error: { message: "Token không hợp lệ hoặc đã hết hạn" }
+            });
+        }
 
         user.password = await bcrypt.hash(newPassword, 8);
         user.resetPasswordToken = undefined;
         user.resetPasswordExpires = undefined;
         await user.save();
 
-        res.send("Đặt lại mật khẩu thành công");
+        return res.status(200).json({ message: "Đặt lại mật khẩu thành công" });
     } catch (error) {
-        console.error(error);
-        res.status(500).send("Lỗi server");
+        console.error("Lỗi server:", error);
+        return res.status(500).json({
+            error: { message: "Lỗi Server: " + error.message }
+        });
     }
 };
 
@@ -146,4 +179,4 @@ module.exports = {
     refreshtoken,
     forgotPassword,
     resetPassword,
-};  
+};

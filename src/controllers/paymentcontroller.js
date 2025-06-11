@@ -3,10 +3,10 @@ const Payment = require("../models/payment");
 const createPayment = async (req, res) => {
     try {
         const payment = await Payment.create(req.body);
-        return res.status(201).send(payment);
+        return res.status(201).json(payment);
     } catch (error) {
-        console.log("Lỗi server! ", error);
-        return res.status(500).send("Lỗi Server");
+        console.error("Lỗi server:", error);
+        return res.status(500).json({ error: { message: "Lỗi server" } });
     }
 };
 
@@ -23,8 +23,7 @@ const getAllPayments = async (req, res) => {
             });
 
         if (!payments || payments.length === 0) {
-            console.log("Không có thanh toán nào!");
-            return res.status(404).send("Không có thanh toán nào!");
+            return res.status(404).json({ error: { message: "Không có thanh toán nào" } });
         }
 
         const formattedPayments = payments.map(payment => ({
@@ -45,8 +44,8 @@ const getAllPayments = async (req, res) => {
 
         return res.status(200).json(formattedPayments);
     } catch (error) {
-        console.log("Lỗi server: ", error);
-        return res.status(500).send("Lỗi Server");
+        console.error("Lỗi server:", error);
+        return res.status(500).json({ error: { message: "Lỗi server" } });
     }
 };
 
@@ -63,8 +62,7 @@ const getPaymentById = async (req, res) => {
             });
 
         if (!payment) {
-            console.log("Thanh toán không tồn tại!");
-            return res.status(404).send("Thanh toán không tồn tại");
+            return res.status(404).json({ error: { message: "Thanh toán không tồn tại" } });
         }
 
         const formattedPayment = {
@@ -85,23 +83,21 @@ const getPaymentById = async (req, res) => {
 
         return res.status(200).json(formattedPayment);
     } catch (error) {
-        console.log("Lỗi server: ", error);
-        return res.status(500).send("Lỗi Server");
+        console.error("Lỗi server:", error);
+        return res.status(500).json({ error: { message: "Lỗi server" } });
     }
 };
-
 
 const deletePaymentById = async (req, res) => {
     try {
         const payment = await Payment.findByIdAndDelete(req.params.id);
         if (!payment) {
-            console.log("Thanh toán không tồn tại!");
-            return res.status(404).send("Thanh toán không tồn tại");
+            return res.status(404).json({ error: { message: "Thanh toán không tồn tại" } });
         }
-        else return res.status(204).send("Xóa thanh toán thành công");
+        return res.status(204).send();
     } catch (error) {
-        console.log("Lỗi server: ", error);
-        return res.status(500).send("Lỗi Server");
+        console.error("Lỗi server:", error);
+        return res.status(500).json({ error: { message: "Lỗi server" } });
     }
 };
 
@@ -113,13 +109,12 @@ const updatePaymentById = async (req, res) => {
             { new: true }
         );
         if (!payment) {
-            console.log("Thanh toán không tồn tại!");
-            return res.status(404).send("Thanh toán không tồn tại");
+            return res.status(404).json({ error: { message: "Thanh toán không tồn tại" } });
         }
-        return res.status(200).send(payment);
+        return res.status(200).json(payment);
     } catch (error) {
-        console.log("Lỗi server: ", error);
-        return res.status(500).send("Lỗi Server");
+        console.error("Lỗi server:", error);
+        return res.status(500).json({ error: { message: "Lỗi server" } });
     }
 };
 

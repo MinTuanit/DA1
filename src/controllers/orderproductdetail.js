@@ -1,90 +1,82 @@
-const Oderproduct = require("../models/orderproductdetail");
+const OrderProductDetail = require("../models/orderproductdetail");
 
-const createOderproduct = async (req, res) => {
+const createOrderProduct = async (req, res) => {
     try {
-        const Orderproduct = await Oderproduct.create(req.body);
-        return res.status(201).send(Orderproduct);
+        const newOrderProduct = await OrderProductDetail.create(req.body);
+        return res.status(201).json(newOrderProduct);
     } catch (error) {
-        console.log("Lỗi server! ", error);
-        return res.status(500).send("Lỗi Server");
+        console.error("Lỗi server:", error);
+        return res.status(500).json({ error: { message: "Lỗi server" } });
     }
 };
 
-const getAllOderproducts = async (req, res) => {
+const getAllOrderProducts = async (req, res) => {
     try {
-        const Orderproducts = await Oderproduct.find();
-        return res.status(201).send(Orderproducts);
+        const orderProducts = await OrderProductDetail.find();
+        return res.status(200).json(orderProducts);
     } catch (error) {
-        console.log("Lỗi server! ", error);
-        return res.status(500).send("Lỗi Server");
+        console.error("Lỗi server:", error);
+        return res.status(500).json({ error: { message: "Lỗi server" } });
     }
 };
 
-const getOrderproductById = async (req, res) => {
+const getOrderProductById = async (req, res) => {
     try {
-        const Orderproduct = await Oderproduct.findById(req.params.id);
-        if (!Orderproduct) {
-            console.log("Hóa đơn chi tiết không tồn tại!");
-            return res.status(404).send("Hóa đơn chi tiết không tồn tại");
+        const orderProduct = await OrderProductDetail.findById(req.params.id);
+        if (!orderProduct) {
+            return res.status(404).json({ error: { message: "Hóa đơn chi tiết không tồn tại" } });
         }
-        return res.status(201).send(Orderproduct);
+        return res.status(200).json(orderProduct);
     } catch (error) {
-        console.log("Lỗi server: ", error);
-        return res.status(500).send("Lỗi Server");
+        console.error("Lỗi server:", error);
+        return res.status(500).json({ error: { message: "Lỗi server" } });
     }
 };
 
-const getOrderproductByOrderId = async (req, res) => {
+const getOrderProductsByOrderId = async (req, res) => {
     try {
-        const orderproducts = await Orderproduct.find({ order_id: req.params.orderid });
-        if (!orderproducts || orderproducts.length === 0) {
-            console.log("Không có hóa đơn chi tiết của hóa đơn này!");
-            return res.status(404).send("Không có hóa đơn chi tiết của hóa đơn này");
+        const orderProducts = await OrderProductDetail.find({ order_id: req.params.orderid });
+        if (!orderProducts || orderProducts.length === 0) {
+            return res.status(404).json({ error: { message: "Không có hóa đơn chi tiết của hóa đơn này" } });
         }
-        return res.status(200).send(orderproducts);
+        return res.status(200).json(orderProducts);
     } catch (error) {
-        console.log("Lỗi server: ", error);
-        return res.status(500).send("Lỗi Server");
+        console.error("Lỗi server:", error);
+        return res.status(500).json({ error: { message: "Lỗi server" } });
     }
 };
 
-const deleteOderproductById = async (req, res) => {
+const deleteOrderProductById = async (req, res) => {
     try {
-        const Orderproduct = await Oderproduct.findByIdAndDelete(req.params.id);
-        if (!Orderproduct) {
-            console.log("Hóa đơn chi tiết không tồn tại!");
-            return res.status(404).send("Hóa đơn chi tiết không tồn tại");
+        const deleted = await OrderProductDetail.findByIdAndDelete(req.params.id);
+        if (!deleted) {
+            return res.status(404).json({ error: { message: "Hóa đơn chi tiết không tồn tại" } });
         }
-        else return res.status(204).send("Xóa hóa đơn chi tiết thành công");
+        return res.status(204).send(); // Không cần nội dung
     } catch (error) {
-        console.log("Lỗi server: ", error);
-        return res.status(500).send("Lỗi Server");
+        console.error("Lỗi server:", error);
+        return res.status(500).json({ error: { message: "Lỗi server" } });
     }
 };
 
-const updateOderproductById = async (req, res) => {
+const updateOrderProductById = async (req, res) => {
     try {
-        const Orderproduct = await Oderproduct.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            { new: true }
-        );
-        if (!Orderproduct) {
-            console.log("Hóa đơn chi tiết không tồn tại!");
-            return res.status(404).send("Hóa đơn chi tiết không tồn tại");
+        const updated = await OrderProductDetail.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!updated) {
+            return res.status(404).json({ error: { message: "Hóa đơn chi tiết không tồn tại" } });
         }
-        return res.status(200).send(Orderproduct);
+        return res.status(200).json(updated);
     } catch (error) {
-        console.log("Lỗi server: ", error);
-        return res.status(500).send("Lỗi Server");
+        console.error("Lỗi server:", error);
+        return res.status(500).json({ error: { message: "Lỗi server" } });
     }
 };
 
 module.exports = {
-    createOderproduct,
-    updateOderproductById,
-    getAllOderproducts,
-    deleteOderproductById,
-    getOrderproductById,
-    getOrderproductByOrderId
+    createOrderProduct,
+    getAllOrderProducts,
+    getOrderProductById,
+    getOrderProductsByOrderId,
+    deleteOrderProductById,
+    updateOrderProductById
 };

@@ -3,20 +3,20 @@ const Movie = require("../models/movie");
 const createMovie = async (req, res) => {
     try {
         const movie = await Movie.create(req.body);
-        return res.status(201).send(movie);
+        return res.status(201).json(movie);
     } catch (error) {
         console.log("Lỗi server! ", error);
-        return res.status(500).send("Lỗi Server");
+        return res.status(500).json({ error: { message: "Lỗi Server" } });
     }
 };
 
 const getAllMovies = async (req, res) => {
     try {
         const movies = await Movie.find();
-        return res.status(201).send(movies);
+        return res.status(200).json(movies);
     } catch (error) {
         console.log("Lỗi server! ", error);
-        return res.status(500).send("Lỗi Server");
+        return res.status(500).json({ error: { message: "Lỗi Server" } });
     }
 };
 
@@ -25,12 +25,12 @@ const getMovieById = async (req, res) => {
         const movie = await Movie.findById(req.params.id);
         if (!movie) {
             console.log("Phim không tồn tại!");
-            return res.status(404).send("Phim không tồn tại");
+            return res.status(404).json({ error: { message: "Phim không tồn tại" } });
         }
-        return res.status(201).send(movie);
+        return res.status(200).json(movie);
     } catch (error) {
         console.log("Lỗi server: ", error);
-        return res.status(500).send("Lỗi Server");
+        return res.status(500).json({ error: { message: "Lỗi Server" } });
     }
 };
 
@@ -39,7 +39,7 @@ const getMovieByStatus = async (req, res) => {
         let { status } = req.query;
 
         if (!status) {
-            return res.status(400).send("Thiếu trạng thái phim");
+            return res.status(400).json({ error: { message: "Thiếu trạng thái phim" } });
         }
 
         if (typeof status === 'string') {
@@ -51,22 +51,21 @@ const getMovieByStatus = async (req, res) => {
         return res.status(200).json(movies);
     } catch (error) {
         console.error("Lỗi khi lấy phim theo trạng thái:", error);
-        return res.status(500).send("Lỗi Server");
+        return res.status(500).json({ error: { message: "Lỗi Server" } });
     }
 };
-
 
 const deleteMovieById = async (req, res) => {
     try {
         const movie = await Movie.findByIdAndDelete(req.params.id);
         if (!movie) {
             console.log("Phim không tồn tại!");
-            return res.status(404).send("Phim không tồn tại");
+            return res.status(404).json({ error: { message: "Phim không tồn tại" } });
         }
-        else return res.status(204).send("Xóa phim thành công");
+        return res.status(200).json({ message: "Xóa phim thành công" });
     } catch (error) {
         console.log("Lỗi server: ", error);
-        return res.status(500).send("Lỗi Server");
+        return res.status(500).json({ error: { message: "Lỗi Server" } });
     }
 };
 
@@ -79,12 +78,12 @@ const updateMovieById = async (req, res) => {
         );
         if (!movie) {
             console.log("Phim không tồn tại!");
-            return res.status(404).send("Phim không tồn tại");
+            return res.status(404).json({ error: { message: "Phim không tồn tại" } });
         }
-        return res.status(200).send(movie);
+        return res.status(200).json(movie);
     } catch (error) {
         console.log("Lỗi server: ", error);
-        return res.status(500).send("Lỗi Server");
+        return res.status(500).json({ error: { message: "Lỗi Server" } });
     }
 };
 
