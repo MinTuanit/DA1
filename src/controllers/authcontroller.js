@@ -126,7 +126,7 @@ const forgotPassword = async (req, res) => {
         user.resetPasswordExpires = expireTime;
         await user.save();
 
-        const resetLink = `http://localhost:3000/reset-password?token=${token}`;
+        const resetLink = `http://localhost:5173/reset-password?token=${token}`;
 
         await transporter.sendMail({
             from: `"Rạp Chiếu Phim" <${process.env.MAIL_USERNAME}>`,
@@ -158,7 +158,7 @@ const resetPassword = async (req, res) => {
             });
         }
 
-        user.password = await bcrypt.hash(newPassword, 8);
+        user.password = newPassword;
         user.resetPasswordToken = undefined;
         user.resetPasswordExpires = undefined;
         await user.save();
