@@ -126,7 +126,7 @@ const forgotPassword = async (req, res) => {
         user.resetPasswordExpires = expireTime;
         await user.save();
 
-        const resetLink = `http://localhost:5173/reset-password?token=${token}`;
+        const resetLink = `http://localhost:5173/user/reset-password?token=${token}`;
 
         await transporter.sendMail({
             from: `"Rạp Chiếu Phim" <${process.env.MAIL_USERNAME}>`,
