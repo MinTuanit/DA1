@@ -26,6 +26,7 @@
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pdfkit": "^0.17.1",
+    "puppeteer": "^24.10.2",
     "sequelize": "^6.37.7",
     "string-similarity": "^4.0.4",
     "validator": "^13.12.0"

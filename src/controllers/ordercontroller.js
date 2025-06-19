@@ -9,9 +9,10 @@ const Seat = require("../models/seat");
 const Product = require("../models/product");
 const mongoose = require('mongoose');
 const sendOrderConfirmationEmail = require('../utils/email');
-const PDFDocument = require('pdfkit');
 const path = require('path');
 const formatDate = require("../utils/formatdate");
+const puppeteer = require('puppeteer');
+const generateOrderHtml = require('../utils/generateOrderHtml');
 
 const generateUniqueOrderCode = async () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -143,12 +144,10 @@ const createOrders = async (req, res) => {
                 const showtime = populatedTickets[0]?.showtime_id;
                 const cinemaName = showtime?.room_id?.cinema_id?.name;
                 const movieName = showtime?.movie_id?.title;
-
                 const simplifiedTickets = populatedTickets.map(t => ({
                     seat_name: t.seat_id?.seat_name,
                     price: t.showtime_id?.price,
                 }));
-
                 await sendOrderConfirmationEmail({
                     toEmail: email,
                     ordercode,
@@ -169,46 +168,20 @@ const createOrders = async (req, res) => {
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `inline; filename=hoadon_${ordercode}.pdf`);
 
-        const doc = new PDFDocument();
-        doc.pipe(res);
-        const fontPath = path.join(__dirname, '../assets/fonts/Roboto-Regular.ttf');
-        doc.font(fontPath);
-
-        doc.fontSize(20).text('HÓA ĐƠN ĐẶT VÉ', { align: 'center' });
-        doc.moveDown();
-        doc.fontSize(12).text(`Mã hóa đơn: ${ordercode}`);
-        doc.text(`Ngày đặt: ${formatDate(order.ordered_at)}`);
-        doc.text(`Tổng tiền: ${total_price} VND`);
-        doc.moveDown();
-
-        if (populatedTickets.length > 0) {
-            const cinemaName = populatedTickets[0]?.showtime_id?.room_id?.cinema_id?.name;
-            const address = populatedTickets[0]?.showtime_id?.room_id?.cinema_id?.address;
-            const room = populatedTickets[0]?.showtime_id?.room_id?.name;
-            const time = populatedTickets[0]?.showtime_id?.showtime;
-            const movie = populatedTickets[0]?.showtime_id?.movie_id?.title;
-
-            doc.fontSize(14).text('Vé xem phim:', { underline: true });
-            doc.fontSize(13).text(`Rạp chiếu phim: ${cinemaName}`);
-            doc.fontSize(12).text(`Địa chỉ: ${address}`);
-            doc.moveDown(0.5);
-            doc.fontSize(12).text(`Phim: ${movie || ''}`);
-            doc.text(`Phòng: ${room}`);
-            doc.text(`Suất chiếu: ${formatDate(time)}`);
-            populatedTickets.forEach((t) => {
-                doc.text(`   Ghế: ${t.seat_id?.seat_name}`);
-            });
-        }
-
-        if (populatedProducts.length > 0) {
-            doc.moveDown();
-            doc.fontSize(14).text('Sản phẩm:', { underline: true });
-            populatedProducts.forEach((p, idx) => {
-                doc.fontSize(12).text(`- ${idx + 1}. ${p.product_id?.name} x${p.quantity}`);
-            });
-        }
-
-        doc.end();
+        // --- Puppeteer PDF generation ---
+        const html = generateOrderHtml({
+            ordercode,
+            ordered_at: formatDate(order.ordered_at),
+            total_price,
+            populatedTickets,
+            populatedProducts
+        });
+        const browser = await puppeteer.launch();
+        const page = await browser.newPage();
+        await page.setContent(html, { waitUntil: 'networkidle0' });
+        const pdfBuffer = await page.pdf({ format: 'A4' });
+        await browser.close();
+        res.end(pdfBuffer);
     } catch (error) {
         if (session.inTransaction()) {
             await session.abortTransaction();
@@ -368,49 +341,26 @@ const getOrderByCode = async (req, res) => {
                 .populate({ path: 'product_id', select: 'name' })
         ]);
 
-        // PDF header
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `inline; filename=hoadon_${ordercode}.pdf`);
-        const doc = new PDFDocument();
-        doc.pipe(res);
 
-        const fontPath = path.join(__dirname, '../assets/fonts/Roboto-Regular.ttf');
-        doc.font(fontPath);
-        doc.fontSize(20).text('HÓA ĐƠN ĐẶT VÉ', { align: 'center' });
-        doc.moveDown();
-        doc.fontSize(12).text(`Mã hóa đơn: ${ordercode}`);
-        doc.text(`Ngày đặt: ${formatDate(order.ordered_at)}`);
-        doc.text(`Tổng tiền: ${order.total_price} VND`);
-        doc.moveDown();
-
-        // Tickets info
-        if (tickets.length > 0) {
-            const showtime = tickets[0].showtime_id;
-            const room = showtime?.room_id;
-            const cinema = room?.cinema_id;
-
-            doc.fontSize(14).text('Vé xem phim:', { underline: true });
-            doc.fontSize(13).text(`Rạp chiếu phim: ${cinema?.name}`);
-            doc.fontSize(12).text(`Địa chỉ: ${cinema?.address}`);
-            doc.text(`Phim: ${showtime?.movie_id?.title}`);
-            doc.text(`Phòng: ${room?.name}`);
-            doc.text(`Suất chiếu: ${formatDate(showtime?.showtime)}`);
-            tickets.forEach(t => doc.text(`   Ghế: ${t.seat_id?.seat_name}`));
-        }
-
-        // Product info
-        if (products.length > 0) {
-            doc.moveDown();
-            doc.fontSize(14).text('Sản phẩm:', { underline: true });
-            products.forEach((p, i) => {
-                doc.fontSize(12).text(`- ${i + 1}. ${p.product_id?.name} x${p.quantity}`);
-            });
-        }
-
-        doc.end();
+        // --- Puppeteer PDF generation ---
+        const html = generateOrderHtml({
+            ordercode,
+            ordered_at: formatDate(order.ordered_at),
+            total_price: order.total_price,
+            populatedTickets: tickets,
+            populatedProducts: products
+        });
+        const browser = await puppeteer.launch();
+        const page = await browser.newPage();
+        await page.setContent(html, { waitUntil: 'networkidle0' });
+        const pdfBuffer = await page.pdf({ format: 'A4' });
+        await browser.close();
+        res.end(pdfBuffer);
     } catch (error) {
-        console.error("Lỗi server: ", error);
-        return res.status(500).json({ error: { message: "Lỗi server" } });
+        console.error("Lỗi khi tạo hóa đơn:", error);
+        return res.status(500).json({ error: { message: "Lỗi khi tạo hóa đơn" } });
     }
 };
 
