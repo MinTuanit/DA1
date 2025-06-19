@@ -45,7 +45,8 @@ const chatbot = async (req, res) => {
         console.log('Prompt content:\n', prompt);
 
         const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-            model: 'anthropic/claude-3-haiku:beta',
+            model: 'meta-llama/llama-3.3-8b-instruct:free',
+            max_tokens: 1000,
             messages: [
                 { role: 'system', content: prompt },
                 { role: 'user', content: req.body.message }
