@@ -1,4 +1,5 @@
 const User = require("../models/user");
+const Order = require("../models/order");
 const bcrypt = require("bcryptjs");
 
 const createUser = async (req, res) => {
@@ -78,7 +79,21 @@ const getUserByRole = async (req, res) => {
       return res.status(404).json({ error: { message: "Không tìm thấy người dùng với vai trò: " + role } });
     }
 
-    return res.status(200).json(users);
+    const usersWithCredit = await Promise.all(users.map(async user => {
+      const orders = await Order.find({
+        user_id: user._id,
+        status: 'completed'
+      });
+
+      const totalSpent = orders.reduce((sum, order) => sum + order.total_price, 0);
+
+      return {
+        ...user.toObject(),
+        credit: totalSpent
+      };
+    }));
+
+    return res.status(200).json(usersWithCredit);
   } catch (error) {
     console.error("Lỗi server!", error);
     return res.status(500).json({ error: { message: "Lỗi Server: " + error.message } });
@@ -149,6 +164,25 @@ const updateUserById = async (req, res) => {
   }
 };
 
+const getUserCreditPoints = async (req, res) => {
+  const { userid } = req.params;
+
+  try {
+    const orders = await Order.find({
+      user_id: userid,
+      status: 'completed'
+    });
+
+    const totalSpent = orders.reduce((sum, order) => sum + order.total_price, 0);
+
+    return res.status(200).json({
+      credit_points: totalSpent
+    });
+  } catch (err) {
+    return res.status(500).json({ error: { message: "Lỗi khi tính điểm tích lũy" } });
+  }
+};
+
 module.exports = {
   createUser,
   updateUserById,
@@ -156,5 +190,6 @@ module.exports = {
   deleteUserById,
   getUserById,
   getUserByEmail,
-  getUserByRole
+  getUserByRole,
+  getUserCreditPoints
 };

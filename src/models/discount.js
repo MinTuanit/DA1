@@ -36,6 +36,17 @@ const DiscountSchema = new mongoose.Schema(
       type: Date,
       required: true
     },
+    movie_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Movies",
+      require: false,
+      default: null
+    },
+    credit: {
+      type: Number,
+      require: false,
+      default: 0
+    },
     created_at: {
       type: Date,
       default: Date.now
